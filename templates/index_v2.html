@@ -139,7 +139,10 @@
     <div id="event-modal" class="modal hidden">
         <div class="modal-content">
             <h3>Create New Event</h3>
-            <input type="text" id="event-name-input" placeholder="e.g., Christmas 2024, New Year Party">
+            <label for="event-name-input" style="font-weight: bold; color: #1DA1F2; margin-bottom: 5px; display: block;">Event Name:</label>
+            <input type="text" id="event-name-input" placeholder="e.g., Christmas, New Year Party">
+            <label for="event-date-input" style="font-weight: bold; color: #1DA1F2; margin-bottom: 5px; margin-top: 15px; display: block;">Event Date:</label>
+            <input type="date" id="event-date-input">
             <div class="modal-buttons">
                 <button class="btn btn-success" id="create-event-btn">Create</button>
                 <button class="btn btn-secondary" id="cancel-event-btn">Cancel</button>

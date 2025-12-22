@@ -87,6 +87,11 @@ async function handleEventChange(e) {
 function showEventModal() {
     document.getElementById('event-modal').classList.remove('hidden');
     document.getElementById('event-name-input').value = '';
+    
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('event-date-input').value = today;
+    
     document.getElementById('event-name-input').focus();
 }
 
@@ -98,18 +103,27 @@ function hideEventModal() {
 // Create New Event
 async function createEvent() {
     const eventName = document.getElementById('event-name-input').value.trim();
+    const eventDate = document.getElementById('event-date-input').value;
     
     if (!eventName) {
         showToast('Please enter an event name', 'error');
         return;
     }
     
+    if (!eventDate) {
+        showToast('Please select an event date', 'error');
+        return;
+    }
+    
+    // Format: EventName - Date
+    const fullEventName = `${eventName} - ${eventDate}`;
+    
     showLoading(true);
     try {
         const response = await fetch('/api/events', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event_name: eventName })
+            body: JSON.stringify({ event_name: fullEventName })
         });
         
         const result = await response.json();
@@ -117,11 +131,11 @@ async function createEvent() {
         if (result.success) {
             hideEventModal();
             await loadEvents();
-            document.getElementById('event-select').value = eventName;
-            currentEvent = eventName;
+            document.getElementById('event-select').value = fullEventName;
+            currentEvent = fullEventName;
             players = [];
             addPlayer(); // Add first empty player
-            showToast(`Event "${eventName}" created!`, 'success');
+            showToast(`Event "${fullEventName}" created!`, 'success');
         } else {
             showToast(result.error || 'Error creating event', 'error');
         }

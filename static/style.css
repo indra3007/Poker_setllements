@@ -602,6 +602,15 @@ input[type="number"] {
     margin-bottom: 20px;
 }
 
+.modal-content input[type="date"] {
+    cursor: pointer;
+}
+
+.modal-content label {
+    display: block;
+    margin-bottom: 5px;
+}
+
 .modal-content input:focus {
     outline: none;
     border-color: var(--primary);
