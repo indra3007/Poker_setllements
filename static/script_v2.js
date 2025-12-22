@@ -37,8 +37,30 @@ function initTabs() {
 
 // Attach Event Listeners
 function attachEventListeners() {
-    document.getElementById('create-new-event-btn').addEventListener('click', showEventModal);
-    document.getElementById('create-event-btn').addEventListener('click', createEvent);
+    console.log('Attaching event listeners...');
+    const createNewBtn = document.getElementById('create-new-event-btn');
+    const createBtn = document.getElementById('create-event-btn');
+    console.log('Create new event button:', createNewBtn);
+    console.log('Create event button:', createBtn);
+    
+    if (createNewBtn) {
+        createNewBtn.addEventListener('click', () => {
+            console.log('Create new event button clicked!');
+            showEventModal();
+        });
+    } else {
+        console.error('create-new-event-btn not found!');
+    }
+    
+    if (createBtn) {
+        createBtn.addEventListener('click', () => {
+            console.log('Create button clicked!');
+            createEvent();
+        });
+    } else {
+        console.error('create-event-btn not found!');
+    }
+    
     document.getElementById('cancel-event-btn').addEventListener('click', hideEventModal);
     document.getElementById('back-to-home').addEventListener('click', showHomeScreen);
     document.getElementById('add-player').addEventListener('click', addPlayer);
@@ -151,12 +173,16 @@ async function handleEventChange(e) {
 
 // Show Event Modal
 function showEventModal() {
-    document.getElementById('event-modal').classList.remove('hidden');
+    console.log('showEventModal called');
+    const modal = document.getElementById('event-modal');
+    console.log('Modal element:', modal);
+    modal.classList.remove('hidden');
     document.getElementById('event-name-input').value = '';
     
     // Set default date to today
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('event-date-input').value = today;
+    console.log('Modal should now be visible, date set to:', today);
     
     document.getElementById('event-name-input').focus();
 }
