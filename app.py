@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Poker Tracker Web App - Version 2
-With Event/Session Management
+With Event/Session Management and Quick Player Selection
 """
 
 from flask import Flask, render_template, request, jsonify
