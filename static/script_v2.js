@@ -4,6 +4,10 @@ let currentEvent = '';
 let profitLossChart = null;
 let chipsTrendChart = null;
 let allEvents = [];
+let autoSaveTimer = null;
+let isSaving = false;
+let autoSaveTimer = null;
+let isSaving = false;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -230,12 +234,27 @@ async function loadEventData(eventName) {
     }
 }
 
+// Schedule Auto-Save (Debounced)
+function scheduleAutoSave() {
+    // Clear existing timer
+    if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+    }
+    
+    // Set new timer - auto-save after 2 seconds of no changes
+    autoSaveTimer = setTimeout(() => {
+        saveData(true); // true = silent auto-save
+    }, 2000);
+}
+
 // Save Data
-async function saveData() {
+async function saveData(silent = false) {
     if (!currentEvent) {
-        showToast('Please select an event first', 'error');
+        if (!silent) showToast('Please select an event first', 'error');
         return;
     }
+    
+    if (isSaving) return; // Prevent concurrent saves
     
     // Collect data from table
     const tbody = document.getElementById('players-tbody');
@@ -262,7 +281,18 @@ async function saveData() {
         }
     });
     
-    showLoading(true);
+    if (!silent) showLoading(true);
+    isSaving = true;
+    
+    // Show saving indicator
+    if (silent) {
+        const saveBtn = document.getElementById('save-data');
+        if (saveBtn) {
+            saveBtn.textContent = '💾 Saving...';
+            saveBtn.style.opacity = '0.7';
+        }
+    }
+    
     try {
         const response = await fetch(`/api/save/${encodeURIComponent(currentEvent)}`, {
             method: 'POST',
@@ -272,17 +302,30 @@ async function saveData() {
         
         const result = await response.json();
         if (result.success) {
-            showToast('✅ Data saved successfully!', 'success');
+            if (!silent) {
+                showToast('✅ Data saved successfully!', 'success');
+            } else {
+                // Briefly show auto-save indicator
+                const saveBtn = document.getElementById('save-data');
+                if (saveBtn) {
+                    saveBtn.textContent = '✓ Saved';
+                    saveBtn.style.opacity = '1';
+                    setTimeout(() => {
+                        saveBtn.textContent = '💾 Save';
+                    }, 2000);
+                }
+            }
             // Just update P/L and totals without reloading entire table (preserves current inputs)
             renderTable();
             updateTotals();
             updateSummary();
         }
     } catch (error) {
-        showToast('Error saving data', 'error');
+        if (!silent) showToast('Error saving data', 'error');
         console.error(error);
     } finally {
-        showLoading(false);
+        if (!silent) showLoading(false);
+        isSaving = false;
     }
 }
 
@@ -407,6 +450,14 @@ function createTableRow(player, index) {
         input.addEventListener('input', () => {
             updateTotals();
             updateSummary();
+            scheduleAutoSave(); // Auto-save on input change
+        });
+        
+        // Also auto-save when user finishes editing (blur)
+        input.addEventListener('blur', () => {
+            if (currentEvent) {
+                scheduleAutoSave();
+            }
         });
     });
     
