@@ -435,7 +435,8 @@ header .subtitle {
 
 .event-card-footer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    gap: 10px;
     margin-top: 15px;
 }
 

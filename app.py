@@ -173,6 +173,39 @@ def create_event():
     
     return jsonify({'success': True, 'event_name': event_name})
 
+@app.route('/api/events/<event_name>', methods=['DELETE'])
+def delete_event(event_name):
+    """Delete an event"""
+    events = load_events()
+    
+    if event_name not in events:
+        return jsonify({'success': False, 'error': 'Event not found'}), 404
+    
+    # Remove from events list
+    events.remove(event_name)
+    save_events(events)
+    
+    # Remove sheet from Excel
+    try:
+        wb = create_or_load_workbook()
+        if event_name in wb.sheetnames:
+            del wb[event_name]
+            wb.save(EXCEL_FILE)
+        wb.close()
+    except Exception as e:
+        print(f"Error deleting sheet: {e}")
+    
+    # Remove settlement tracking for this event
+    try:
+        settlements = load_settlement_payments()
+        if event_name in settlements:
+            del settlements[event_name]
+            save_settlement_payments(settlements)
+    except Exception as e:
+        print(f"Error deleting settlement tracking: {e}")
+    
+    return jsonify({'success': True})
+
 @app.route('/api/data/<event_name>', methods=['GET'])
 def get_event_data(event_name):
     """Get data for specific event"""

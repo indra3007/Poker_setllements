@@ -134,12 +134,18 @@ function renderEventsGrid() {
                 <p class="event-description">Click to view details</p>
             </div>
             <div class="event-card-footer">
-                <button class="btn btn-primary btn-small">Open Event</button>
+                <button class="btn btn-primary btn-small open-btn">Open Event</button>
+                <button class="btn btn-danger btn-small delete-btn">🗑️ Delete</button>
             </div>
         `;
         
-        card.querySelector('button').addEventListener('click', () => {
+        card.querySelector('.open-btn').addEventListener('click', () => {
             showEventView(event);
+        });
+        
+        card.querySelector('.delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteEvent(event);
         });
         
         grid.appendChild(card);
@@ -203,6 +209,36 @@ function hideEventModal() {
     modal.style.display = 'none';  // Remove inline style
     console.log('Modal hidden');
 }
+
+// Delete Event
+async function deleteEvent(eventName) {
+    if (!confirm(`Are you sure you want to delete "${eventName}"? This cannot be undone.`)) {
+        return;
+    }
+    
+    console.log('Deleting event:', eventName);
+    showLoading(true);
+    
+    try {
+        const response = await fetch(`/api/events/${encodeURIComponent(eventName)}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(`Event "${eventName}" deleted successfully`, 'success');
+            await loadEvents(); // Refresh event list
+            showHomeScreen(); // Go back to home
+        } else {
+            showToast(result.error || 'Error deleting event', 'error');
+        }
+    } catch (error) {
+        showToast('Error deleting event', 'error');
+        console.error('Error in deleteEvent:', error);
+    } finally {
+        showLoading(false);
+    }
 
 // Create New Event
 async function createEvent() {
