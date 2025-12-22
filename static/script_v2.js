@@ -200,7 +200,10 @@ async function saveData() {
         const result = await response.json();
         if (result.success) {
             showToast('✅ Data saved successfully!', 'success');
-            await loadEventData(currentEvent); // Reload to get calculated P/L
+            // Just update P/L and totals without reloading entire table (preserves current inputs)
+            renderTable();
+            updateTotals();
+            updateSummary();
         }
     } catch (error) {
         showToast('Error saving data', 'error');
