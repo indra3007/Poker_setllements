@@ -21,6 +21,7 @@
         <div class="tabs">
             <button class="tab active" data-tab="players">👥 Players</button>
             <button class="tab" data-tab="settlements">💰 Settlements</button>
+            <button class="tab" data-tab="charts">📊 Charts</button>
         </div>
 
         <!-- Players Tab -->
@@ -38,6 +39,7 @@
                             <th>Name</th>
                             <th>Phone</th>
                             <th>Start $</th>
+                            <th>Buy-ins</th>
                             <th>Day 1</th>
                             <th>Day 2</th>
                             <th>Day 3</th>
@@ -55,6 +57,7 @@
                     <tfoot>
                         <tr class="total-row">
                             <td colspan="3"><strong>TOTALS</strong></td>
+                            <td id="total-buyins">0</td>
                             <td id="total-day1">$0</td>
                             <td id="total-day2">$0</td>
                             <td id="total-day3">$0</td>
@@ -102,6 +105,18 @@
             </div>
         </div>
 
+        <!-- Charts Tab -->
+        <div id="charts-tab" class="tab-content">
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="refresh-charts">🔄 Refresh Charts</button>
+            </div>
+
+            <div id="charts-container">
+                <canvas id="profit-loss-chart" style="max-height: 300px; margin-bottom: 20px;"></canvas>
+                <canvas id="chips-trend-chart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+
         <!-- Footer -->
         <footer>
             <p>Made with ❤️ for poker nights</p>
@@ -117,6 +132,7 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast hidden"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

@@ -33,6 +33,7 @@ function attachEventListeners() {
     document.getElementById('add-player').addEventListener('click', addPlayer);
     document.getElementById('save-data').addEventListener('click', saveData);
     document.getElementById('calculate-settlements').addEventListener('click', calculateSettlements);
+    document.getElementById('refresh-charts').addEventListener('click', refreshCharts);
     
     const clearBtn = document.getElementById('clear-data');
     if (clearBtn) {
@@ -77,6 +78,7 @@ async function saveData() {
             name: row.querySelector('[data-field="name"]').value,
             phone: row.querySelector('[data-field="phone"]').value,
             start: parseFloat(row.querySelector('[data-field="start"]').value) || 20,
+            buyins: parseInt(row.querySelector('[data-field="buyins"]').value) || 0,
             day1: row.querySelector('[data-field="day1"]').value,
             day2: row.querySelector('[data-field="day2"]').value,
             day3: row.querySelector('[data-field="day3"]').value,
@@ -134,10 +136,35 @@ async function clearAllData() {
 
 // Add Player
 function addPlayer() {
+    // First, collect data from existing rows to preserve inputs
+    const tbody = document.getElementById('players-tbody');
+    const rows = tbody.querySelectorAll('tr');
+    
+    rows.forEach((row, index) => {
+        if (players[index]) {
+            // Update player data from current input values
+            players[index] = {
+                name: row.querySelector('[data-field="name"]').value,
+                phone: row.querySelector('[data-field="phone"]').value,
+                start: parseFloat(row.querySelector('[data-field="start"]').value) || 20,
+                buyins: parseInt(row.querySelector('[data-field="buyins"]').value) || 0,
+                day1: row.querySelector('[data-field="day1"]').value,
+                day2: row.querySelector('[data-field="day2"]').value,
+                day3: row.querySelector('[data-field="day3"]').value,
+                day4: row.querySelector('[data-field="day4"]').value,
+                day5: row.querySelector('[data-field="day5"]').value,
+                day6: row.querySelector('[data-field="day6"]').value,
+                day7: row.querySelector('[data-field="day7"]').value
+            };
+        }
+    });
+    
+    // Now add new empty player
     const player = {
         name: '',
         phone: '',
         start: 20,
+        buyins: 0,
         day1: '',
         day2: '',
         day3: '',
@@ -155,7 +182,6 @@ function addPlayer() {
     updateSummary();
     
     // Focus on the name input of the new row
-    const tbody = document.getElementById('players-tbody');
     const lastRow = tbody.lastElementChild;
     if (lastRow) {
         const nameInput = lastRow.querySelector('[data-field="name"]');
@@ -199,6 +225,7 @@ function createTableRow(player, index) {
         <td><input type="text" data-field="name" value="${player.name || ''}" placeholder="Name"></td>
         <td><input type="tel" data-field="phone" value="${player.phone || ''}" placeholder="Phone"></td>
         <td><input type="number" data-field="start" value="${player.start || 20}" min="0" step="1"></td>
+        <td><input type="number" data-field="buyins" value="${player.buyins || 0}" min="0" step="1" title="Number of $20 buy-ins"></td>
         <td><input type="number" data-field="day1" value="${player.day1 || ''}" placeholder="0" step="0.01"></td>
         <td><input type="number" data-field="day2" value="${player.day2 || ''}" placeholder="0" step="0.01"></td>
         <td><input type="number" data-field="day3" value="${player.day3 || ''}" placeholder="0" step="0.01"></td>
@@ -224,6 +251,7 @@ function createTableRow(player, index) {
 // Calculate P/L for a player
 function calculatePL(player) {
     const start = parseFloat(player.start) || 20;
+    const buyins = parseInt(player.buyins) || 0;
     let daysPlayed = 0;
     let lastValue = start;
     
@@ -236,7 +264,7 @@ function calculatePL(player) {
     }
     
     if (daysPlayed > 0) {
-        const totalInvestment = start + (daysPlayed - 1) * 20;
+        const totalInvestment = start + (buyins * 20);
         return lastValue - totalInvestment;
     }
     
@@ -249,11 +277,18 @@ function updateTotals() {
     const rows = tbody.querySelectorAll('tr');
     
     let totals = {
+        buyins: 0,
         day1: 0, day2: 0, day3: 0, day4: 0,
         day5: 0, day6: 0, day7: 0, pl: 0
     };
     
     rows.forEach(row => {
+        // Count buy-ins
+        const buyinsInput = row.querySelector('[data-field="buyins"]');
+        if (buyinsInput && buyinsInput.value) {
+            totals.buyins += parseInt(buyinsInput.value) || 0;
+        }
+        
         for (let day = 1; day <= 7; day++) {
             const input = row.querySelector(`[data-field="day${day}"]`);
             const value = parseFloat(input.value) || 0;
@@ -266,6 +301,7 @@ function updateTotals() {
         const name = row.querySelector('[data-field="name"]').value;
         if (name) {
             const start = parseFloat(row.querySelector('[data-field="start"]').value) || 20;
+            const buyins = parseInt(row.querySelector('[data-field="buyins"]').value) || 0;
             let daysPlayed = 0;
             let lastValue = start;
             
@@ -278,13 +314,18 @@ function updateTotals() {
             }
             
             if (daysPlayed > 0) {
-                const totalInvestment = start + (daysPlayed - 1) * 20;
+                const totalInvestment = start + (buyins * 20);
                 totals.pl += (lastValue - totalInvestment);
             }
         }
     });
     
     // Update footer
+    const buyinsCell = document.getElementById('total-buyins');
+    if (buyinsCell) {
+        buyinsCell.textContent = totals.buyins;
+    }
+    
     for (let day = 1; day <= 7; day++) {
         const cell = document.getElementById(`total-day${day}`);
         if (cell) {
@@ -317,6 +358,7 @@ function updateSummary() {
             
             // Calculate P/L
             const start = parseFloat(row.querySelector('[data-field="start"]').value) || 20;
+            const buyins = parseInt(row.querySelector('[data-field="buyins"]').value) || 0;
             let daysPlayed = 0;
             let lastValue = start;
             
@@ -329,7 +371,7 @@ function updateSummary() {
             }
             
             if (daysPlayed > 0) {
-                const totalInvestment = start + (daysPlayed - 1) * 20;
+                const totalInvestment = start + (buyins * 20);
                 const pl = lastValue - totalInvestment;
                 
                 if (pl > 0) totalProfit += pl;
@@ -411,4 +453,161 @@ function showToast(message, type = 'success') {
     setTimeout(() => {
         toast.classList.add('hidden');
     }, 3000);
+}
+
+// Chart instances
+let profitLossChart = null;
+let chipsTrendChart = null;
+
+// Refresh Charts
+function refreshCharts() {
+    const tbody = document.getElementById('players-tbody');
+    const rows = tbody.querySelectorAll('tr');
+    
+    if (rows.length === 0) {
+        showToast('Add players first!', 'error');
+        return;
+    }
+    
+    const playerNames = [];
+    const playerPL = [];
+    const playerColors = [];
+    
+    rows.forEach(row => {
+        const name = row.querySelector('[data-field="name"]').value;
+        if (name) {
+            const start = parseFloat(row.querySelector('[data-field="start"]').value) || 20;
+            const buyins = parseInt(row.querySelector('[data-field="buyins"]').value) || 0;
+            let daysPlayed = 0;
+            let lastValue = start;
+            
+            for (let day = 1; day <= 7; day++) {
+                const dayValue = parseFloat(row.querySelector(`[data-field="day${day}"]`).value);
+                if (dayValue) {
+                    daysPlayed++;
+                    lastValue = dayValue;
+                }
+            }
+            
+            if (daysPlayed > 0) {
+                const totalInvestment = start + (buyins * 20);
+                const pl = lastValue - totalInvestment;
+                playerNames.push(name);
+                playerPL.push(pl);
+                playerColors.push(pl >= 0 ? '#17BF63' : '#E0245E');
+            }
+        }
+    });
+    
+    // Profit/Loss Bar Chart
+    const plCtx = document.getElementById('profit-loss-chart').getContext('2d');
+    if (profitLossChart) profitLossChart.destroy();
+    
+    profitLossChart = new Chart(plCtx, {
+        type: 'bar',
+        data: {
+            labels: playerNames,
+            datasets: [{
+                label: 'Profit/Loss ($)',
+                data: playerPL,
+                backgroundColor: playerColors,
+                borderColor: playerColors,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: '📊 Player Profit/Loss',
+                    font: { size: 16, weight: 'bold' }
+                },
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#E1E8ED' },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Chips Trend Line Chart
+    const trendCtx = document.getElementById('chips-trend-chart').getContext('2d');
+    if (chipsTrendChart) chipsTrendChart.destroy();
+    
+    const datasets = [];
+    const colors = ['#1DA1F2', '#17BF63', '#FFAD1F', '#E0245E', '#794BC4'];
+    
+    rows.forEach((row, index) => {
+        const name = row.querySelector('[data-field="name"]').value;
+        if (name) {
+            const chipData = [parseFloat(row.querySelector('[data-field="start"]').value) || 20];
+            
+            for (let day = 1; day <= 7; day++) {
+                const dayValue = parseFloat(row.querySelector(`[data-field="day${day}"]`).value);
+                if (dayValue) {
+                    chipData.push(dayValue);
+                } else {
+                    break;
+                }
+            }
+            
+            if (chipData.length > 1) {
+                datasets.push({
+                    label: name,
+                    data: chipData,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '33',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: false
+                });
+            }
+        }
+    });
+    
+    chipsTrendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: ['Start', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'].slice(0, Math.max(...datasets.map(d => d.data.length))),
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: '📈 Chip Count Progression',
+                    font: { size: 16, weight: 'bold' }
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#E1E8ED' },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    showToast('Charts updated!', 'success');
 }
