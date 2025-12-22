@@ -30,7 +30,6 @@ function initTabs() {
 
 // Attach Event Listeners
 function attachEventListeners() {
-    document.getElementById('add-player').addEventListener('click', addPlayer);
     document.getElementById('save-data').addEventListener('click', saveData);
     document.getElementById('calculate-settlements').addEventListener('click', calculateSettlements);
     document.getElementById('refresh-charts').addEventListener('click', refreshCharts);
@@ -39,6 +38,33 @@ function attachEventListeners() {
     if (clearBtn) {
         clearBtn.addEventListener('click', clearAllData);
     }
+    
+    // Player chip click handlers
+    document.querySelectorAll('.player-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            const name = this.getAttribute('data-name');
+            addPlayer(name);
+        });
+    });
+    
+    // Custom player input handler
+    document.getElementById('add-custom-player').addEventListener('click', function() {
+        const nameInput = document.getElementById('custom-player-name');
+        const name = nameInput.value.trim();
+        if (name) {
+            addPlayer(name);
+            nameInput.value = '';
+        } else {
+            showToast('Please enter a player name', 'error');
+        }
+    });
+    
+    // Allow Enter key in custom player input
+    document.getElementById('custom-player-name').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('add-custom-player').click();
+        }
+    });
 }
 
 // Load Data from Server
@@ -135,7 +161,13 @@ async function clearAllData() {
 }
 
 // Add Player
-function addPlayer() {
+function addPlayer(name = '') {
+    // Check if player already exists
+    if (name && players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        showToast(`${name} is already added!`, 'error');
+        return;
+    }
+    
     // First, collect data from existing rows to preserve inputs
     const tbody = document.getElementById('players-tbody');
     const rows = tbody.querySelectorAll('tr');
@@ -159,9 +191,9 @@ function addPlayer() {
         }
     });
     
-    // Now add new empty player
+    // Now add new player with optional name
     const player = {
-        name: '',
+        name: name,
         phone: '',
         start: 20,
         buyins: 0,
@@ -178,6 +210,10 @@ function addPlayer() {
     
     players.push(player);
     renderTable();
+    updatePlayerChips();
+    if (name) {
+        showToast(`${name} added!`, 'success');
+    }
     updateTotals();
     updateSummary();
     
@@ -200,6 +236,36 @@ function removePlayer(index) {
     }
 }
 
+// Update player chip states
+function updatePlayerChips() {
+    const existingNames = players.map(p => p.name.toLowerCase());
+    document.querySelectorAll('.player-chip').forEach(chip => {
+        const chipName = chip.getAttribute('data-name').toLowerCase();
+        if (existingNames.includes(chipName)) {
+            chip.classList.add('added');
+            chip.disabled = true;
+        } else {
+            chip.classList.remove('added');
+            chip.disabled = false;
+        }
+    });
+}
+
+// Update player chip states
+function updatePlayerChips() {
+    const existingNames = players.map(p => p.name.toLowerCase());
+    document.querySelectorAll('.player-chip').forEach(chip => {
+        const chipName = chip.getAttribute('data-name').toLowerCase();
+        if (existingNames.includes(chipName)) {
+            chip.classList.add('added');
+            chip.disabled = true;
+        } else {
+            chip.classList.remove('added');
+            chip.disabled = false;
+        }
+    });
+}
+
 // Render Table
 function renderTable() {
     const tbody = document.getElementById('players-tbody');
@@ -209,6 +275,8 @@ function renderTable() {
         const row = createTableRow(player, index);
         tbody.appendChild(row);
     });
+    
+    updatePlayerChips();
 }
 
 // Create Table Row
