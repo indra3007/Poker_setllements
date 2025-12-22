@@ -1,11 +1,12 @@
 // Poker Tracker v2 - With Event Management
+console.log('=== SCRIPT_V2.JS LOADING ===');
+console.log('Timestamp:', new Date().toISOString());
+
 let players = [];
 let currentEvent = '';
 let profitLossChart = null;
 let chipsTrendChart = null;
 let allEvents = [];
-let autoSaveTimer = null;
-let isSaving = false;
 let autoSaveTimer = null;
 let isSaving = false;
 
@@ -176,7 +177,14 @@ function showEventModal() {
     console.log('showEventModal called');
     const modal = document.getElementById('event-modal');
     console.log('Modal element:', modal);
+    console.log('Modal classes before:', modal.className);
+    
+    // Force display with inline style AND remove hidden class
+    modal.style.display = 'flex';
     modal.classList.remove('hidden');
+    console.log('Modal classes after:', modal.className);
+    console.log('Modal display style:', modal.style.display);
+    
     document.getElementById('event-name-input').value = '';
     
     // Set default date to today
