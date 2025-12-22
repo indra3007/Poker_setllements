@@ -197,7 +197,11 @@ function showEventModal() {
 
 // Hide Event Modal
 function hideEventModal() {
-    document.getElementById('event-modal').classList.add('hidden');
+    console.log('hideEventModal called');
+    const modal = document.getElementById('event-modal');
+    modal.classList.add('hidden');
+    modal.style.display = 'none';  // Remove inline style
+    console.log('Modal hidden');
 }
 
 // Create New Event
