@@ -168,8 +168,11 @@ function hideEventModal() {
 
 // Create New Event
 async function createEvent() {
+    console.log('createEvent called');
     const eventName = document.getElementById('event-name-input').value.trim();
     const eventDate = document.getElementById('event-date-input').value;
+    
+    console.log('Event name:', eventName, 'Event date:', eventDate);
     
     if (!eventName) {
         showToast('Please enter an event name', 'error');
@@ -183,6 +186,7 @@ async function createEvent() {
     
     // Format: EventName - Date
     const fullEventName = `${eventName} - ${eventDate}`;
+    console.log('Creating event:', fullEventName);
     
     showLoading(true);
     try {
@@ -192,7 +196,9 @@ async function createEvent() {
             body: JSON.stringify({ event_name: fullEventName })
         });
         
+        console.log('Response status:', response.status);
         const result = await response.json();
+        console.log('Result:', result);
         
         if (result.success) {
             hideEventModal();
@@ -201,10 +207,11 @@ async function createEvent() {
             showEventView(fullEventName); // Open the new event
         } else {
             showToast(result.error || 'Error creating event', 'error');
+            console.error('Event creation failed:', result);
         }
     } catch (error) {
         showToast('Error creating event', 'error');
-        console.error(error);
+        console.error('Error in createEvent:', error);
     } finally {
         showLoading(false);
     }
