@@ -14,8 +14,17 @@
         <!-- Header -->
         <header>
             <h1>🎰 Poker Tracker</h1>
-            <p class="subtitle">Track chips, calculate settlements</p>
+            <p class="subtitle">Track events, calculate settlements</p>
         </header>
+
+        <!-- Event Selector -->
+        <div class="event-selector">
+            <label for="event-select">🎯 Event:</label>
+            <select id="event-select">
+                <option value="">-- Select an Event --</option>
+            </select>
+            <button class="btn btn-secondary" id="new-event-btn">+ New Event</button>
+        </div>
 
         <!-- Tab Navigation -->
         <div class="tabs">
@@ -26,17 +35,6 @@
 
         <!-- Players Tab -->
         <div id="players-tab" class="tab-content active">
-            <!-- Event Selection -->
-            <div class="event-selector">
-                <div class="event-controls">
-                    <label for="event-select">🎯 Event:</label>
-                    <select id="event-select" class="event-dropdown">
-                        <option value="">-- Select Event --</option>
-                    </select>
-                    <button class="btn btn-secondary" id="new-event">+ New Event</button>
-                </div>
-            </div>
-
             <div class="action-buttons">
                 <button class="btn btn-primary" id="add-player">+ Add Player</button>
                 <button class="btn btn-success" id="save-data">💾 Save</button>
@@ -104,13 +102,16 @@
 
         <!-- Settlements Tab -->
         <div id="settlements-tab" class="tab-content">
-            <div class="action-buttons">
-                <button class="btn btn-primary" id="calculate-settlements">🔄 Calculate</button>
+            <div class="settlements-header">
+                <h2>💰 Smart Settlements</h2>
+                <p>Who pays whom - minimized transactions</p>
             </div>
+
+            <button class="btn btn-primary btn-large" id="calculate-settlements">🔄 Calculate Settlements</button>
 
             <div id="settlements-container">
                 <div class="info-box">
-                    <p>💡 Click "Calculate" to see who pays whom</p>
+                    <p>💡 Click "Calculate Settlements" to see who pays whom</p>
                     <p>The algorithm minimizes the number of transactions needed</p>
                 </div>
             </div>
@@ -134,6 +135,18 @@
         </footer>
     </div>
 
+    <!-- New Event Modal -->
+    <div id="event-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Create New Event</h3>
+            <input type="text" id="event-name-input" placeholder="e.g., Christmas 2024, New Year Party">
+            <div class="modal-buttons">
+                <button class="btn btn-success" id="create-event-btn">Create</button>
+                <button class="btn btn-secondary" id="cancel-event-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay hidden">
         <div class="spinner"></div>
@@ -141,9 +154,9 @@
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast" class="toast hidden"></div>
+    <div id="toast" class="toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script_v2.js') }}"></script>
 </body>
 </html>

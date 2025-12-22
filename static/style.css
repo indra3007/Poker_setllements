@@ -505,3 +505,211 @@ footer {
         padding-top: 40px; /* Account for status bar */
     }
 }
+
+/* Remove number input arrows/spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* Event Selector */
+.event-selector {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.event-selector label {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 14px;
+}
+
+#event-select {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 14px;
+    border: 2px solid var(--light-gray);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--white);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+#event-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.btn-secondary {
+    background: var(--gray);
+}
+
+.btn-secondary:hover {
+    background: #556677;
+}
+
+/* Event Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h3 {
+    margin-bottom: 20px;
+    color: var(--primary);
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--light-gray);
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.modal-content input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.modal-buttons .btn {
+    flex: 1;
+}
+
+/* Settlements Display */
+.settlements-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.settlements-header h2 {
+    color: var(--primary);
+    margin-bottom: 5px;
+}
+
+.settlements-header p {
+    color: var(--gray);
+    font-size: 14px;
+}
+
+.btn-large {
+    padding: 15px 30px;
+    font-size: 16px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.settlement-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.2s;
+}
+
+.settlement-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.settlement-card .from-player {
+    color: var(--danger);
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.settlement-card .to-player {
+    color: var(--success);
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.settlement-card .amount {
+    background: var(--primary);
+    color: var(--white);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.settlement-arrow {
+    font-size: 20px;
+    color: var(--gray);
+    margin: 0 10px;
+}
+
+.no-settlements {
+    text-align: center;
+    padding: 60px 20px;
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border-radius: 16px;
+    color: var(--success);
+    font-size: 20px;
+    font-weight: 700;
+}
+
+/* Mobile Adjustments for Event Selector */
+@media (max-width: 768px) {
+    .event-selector {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    #event-select {
+        width: 100%;
+    }
+    
+    .settlement-card {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .settlement-card > div:first-child {
+        text-align: center;
+    }
+}
