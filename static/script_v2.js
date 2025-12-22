@@ -3,12 +3,14 @@ let players = [];
 let currentEvent = '';
 let profitLossChart = null;
 let chipsTrendChart = null;
+let allEvents = [];
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     loadEvents();
     attachEventListeners();
+    showHomeScreen(); // Start on home screen
 });
 
 // Tab Navigation
@@ -31,10 +33,10 @@ function initTabs() {
 
 // Attach Event Listeners
 function attachEventListeners() {
-    document.getElementById('event-select').addEventListener('change', handleEventChange);
-    document.getElementById('new-event-btn').addEventListener('click', showEventModal);
+    document.getElementById('create-new-event-btn').addEventListener('click', showEventModal);
     document.getElementById('create-event-btn').addEventListener('click', createEvent);
     document.getElementById('cancel-event-btn').addEventListener('click', hideEventModal);
+    document.getElementById('back-to-home').addEventListener('click', showHomeScreen);
     document.getElementById('add-player').addEventListener('click', addPlayer);
     document.getElementById('save-data').addEventListener('click', saveData);
     document.getElementById('calculate-settlements').addEventListener('click', calculateSettlements);
@@ -47,30 +49,90 @@ function attachEventListeners() {
     });
 }
 
+// Show Home Screen
+function showHomeScreen() {
+    document.getElementById('home-screen').style.display = 'block';
+    document.getElementById('event-view').style.display = 'none';
+    currentEvent = '';
+    players = [];
+    loadEvents(); // Refresh events list
+}
+
+// Show Event View
+function showEventView(eventName) {
+    document.getElementById('home-screen').style.display = 'none';
+    document.getElementById('event-view').style.display = 'block';
+    document.getElementById('current-event-name').textContent = eventName;
+    currentEvent = eventName;
+    loadEventData(eventName);
+}
+
 // Load Events List
 async function loadEvents() {
     try {
         const response = await fetch('/api/events');
         const data = await response.json();
-        const select = document.getElementById('event-select');
+        allEvents = data.events;
         
-        // Clear existing options except first
-        select.innerHTML = '<option value="">-- Select an Event --</option>';
-        
-        data.events.forEach(event => {
-            const option = document.createElement('option');
-            option.value = event;
-            option.textContent = event;
-            select.appendChild(option);
-        });
+        renderEventsGrid();
     } catch (error) {
         showToast('Error loading events', 'error');
         console.error(error);
     }
 }
 
-// Handle Event Selection Change
+// Render Events Grid on Home Screen
+function renderEventsGrid() {
+    const grid = document.getElementById('events-grid');
+    const noEventsMsg = document.getElementById('no-events-message');
+    
+    if (allEvents.length === 0) {
+        grid.innerHTML = '';
+        noEventsMsg.style.display = 'block';
+        return;
+    }
+    
+    noEventsMsg.style.display = 'none';
+    grid.innerHTML = '';
+    
+    allEvents.forEach(event => {
+        const card = document.createElement('div');
+        card.className = 'event-card';
+        card.innerHTML = `
+            <div class="event-card-header">
+                <h3>🎲 ${event}</h3>
+            </div>
+            <div class="event-card-body">
+                <p class="event-date">📅 ${formatEventDate(event)}</p>
+                <p class="event-description">Click to view details</p>
+            </div>
+            <div class="event-card-footer">
+                <button class="btn btn-primary btn-small">Open Event</button>
+            </div>
+        `;
+        
+        card.querySelector('button').addEventListener('click', () => {
+            showEventView(event);
+        });
+        
+        grid.appendChild(card);
+    });
+}
+
+// Format Event Date from event name
+function formatEventDate(eventName) {
+    // Event format: "EventName - YYYY-MM-DD"
+    const parts = eventName.split(' - ');
+    if (parts.length > 1) {
+        const date = new Date(parts[1]);
+        return date.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    return 'No date set';
+}
+
+// Handle Event Selection Change (removed, using event cards instead)
 async function handleEventChange(e) {
+    // Deprecated - keeping for backwards compatibility
     currentEvent = e.target.value;
     
     if (currentEvent) {
@@ -130,12 +192,9 @@ async function createEvent() {
         
         if (result.success) {
             hideEventModal();
-            await loadEvents();
-            document.getElementById('event-select').value = fullEventName;
-            currentEvent = fullEventName;
-            players = [];
-            addPlayer(); // Add first empty player
             showToast(`Event "${fullEventName}" created!`, 'success');
+            await loadEvents(); // Refresh home screen
+            showEventView(fullEventName); // Open the new event
         } else {
             showToast(result.error || 'Error creating event', 'error');
         }
@@ -493,22 +552,43 @@ async function calculateSettlements() {
             data.settlements.forEach(settlement => {
                 const card = document.createElement('div');
                 card.className = 'settlement-card';
+                const isPaid = settlement.paid || false;
+                
                 card.innerHTML = `
-                    <div>
-                        <span class="from-player">${settlement.from}</span>
-                        <span class="settlement-arrow"> → </span>
-                        <span class="to-player">${settlement.to}</span>
+                    <div class="settlement-info">
+                        <div>
+                            <span class="from-player">${settlement.from}</span>
+                            <span class="settlement-arrow"> → </span>
+                            <span class="to-player">${settlement.to}</span>
+                        </div>
+                        <div class="amount">$${settlement.amount.toFixed(2)}</div>
                     </div>
-                    <div class="amount">$${settlement.amount.toFixed(2)}</div>
+                    <div class="settlement-payment">
+                        <button class="btn ${isPaid ? 'btn-success' : 'btn-danger'} payment-btn" 
+                                data-from="${settlement.from}" 
+                                data-to="${settlement.to}"
+                                data-paid="${isPaid}">
+                            ${isPaid ? '✓ Paid' : '✗ Not Paid'}
+                        </button>
+                    </div>
                 `;
+                
+                // Add click handler for payment button
+                const btn = card.querySelector('.payment-btn');
+                btn.addEventListener('click', () => togglePaymentStatus(settlement.from, settlement.to, !isPaid, btn));
+                
                 container.appendChild(card);
             });
             
             const summary = document.createElement('div');
             summary.className = 'summary-box';
+            const paidCount = data.settlements.filter(s => s.paid).length;
             summary.innerHTML = `
                 <p style="text-align: center; margin-top: 20px; color: #657786;">
                     💡 ${data.settlements.length} transaction${data.settlements.length > 1 ? 's' : ''} needed to settle
+                    <br>
+                    <span style="color: #17bf63; font-weight: bold;">${paidCount} paid</span> | 
+                    <span style="color: #e0245e; font-weight: bold;">${data.settlements.length - paidCount} unpaid</span>
                 </p>
             `;
             container.appendChild(summary);
@@ -518,6 +598,38 @@ async function calculateSettlements() {
         console.error(error);
     } finally {
         showLoading(false);
+    }
+}
+
+// Toggle Payment Status
+async function togglePaymentStatus(fromPlayer, toPlayer, paid, button) {
+    try {
+        const response = await fetch(`/api/settlements/${encodeURIComponent(currentEvent)}/mark_paid`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                from: fromPlayer,
+                to: toPlayer,
+                paid: paid
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Update button appearance
+            button.className = `btn ${paid ? 'btn-success' : 'btn-danger'} payment-btn`;
+            button.textContent = paid ? '✓ Paid' : '✗ Not Paid';
+            button.dataset.paid = paid;
+            
+            // Update click handler
+            button.onclick = () => togglePaymentStatus(fromPlayer, toPlayer, !paid, button);
+            
+            showToast(result.message, 'success');
+        }
+    } catch (error) {
+        showToast('Error updating payment status', 'error');
+        console.error(error);
     }
 }
 

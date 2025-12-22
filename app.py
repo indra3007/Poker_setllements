@@ -16,6 +16,19 @@ app.config['SECRET_KEY'] = 'poker-tracker-secret-key-2025'
 
 EXCEL_FILE = 'poker_tracker.xlsx'
 EVENTS_FILE = 'events.json'
+SETTLEMENTS_FILE = 'settlements_tracking.json'
+
+def load_settlement_payments():
+    """Load settlement payment tracking from JSON"""
+    if os.path.exists(SETTLEMENTS_FILE):
+        with open(SETTLEMENTS_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_settlement_payments(payments):
+    """Save settlement payment tracking to JSON"""
+    with open(SETTLEMENTS_FILE, 'w') as f:
+        json.dump(payments, f, indent=2)
 
 def load_events():
     """Load events list from JSON file"""
@@ -267,10 +280,47 @@ def get_event_settlements(event_name):
     
     settlements = calculate_settlements(players)
     
+    # Load payment status for this event
+    payment_tracking = load_settlement_payments()
+    event_payments = payment_tracking.get(event_name, {})
+    
+    # Add payment status to each settlement
+    for settlement in settlements:
+        settlement_key = f"{settlement['from']}→{settlement['to']}"
+        settlement['paid'] = event_payments.get(settlement_key, False)
+    
     return jsonify({
         'settlements': settlements,
         'total_winners': sum(p['pl'] for p in players if p['pl'] > 0),
         'total_losers': abs(sum(p['pl'] for p in players if p['pl'] < 0))
+    })
+
+@app.route('/api/settlements/<event_name>/mark_paid', methods=['POST'])
+def mark_settlement_paid(event_name):
+    """Mark a settlement as paid or unpaid"""
+    data = request.json
+    from_player = data.get('from')
+    to_player = data.get('to')
+    paid = data.get('paid', True)
+    
+    settlement_key = f"{from_player}→{to_player}"
+    
+    # Load existing payment tracking
+    payment_tracking = load_settlement_payments()
+    
+    # Initialize event tracking if not exists
+    if event_name not in payment_tracking:
+        payment_tracking[event_name] = {}
+    
+    # Update payment status
+    payment_tracking[event_name][settlement_key] = paid
+    
+    # Save back to file
+    save_settlement_payments(payment_tracking)
+    
+    return jsonify({
+        'success': True,
+        'message': f"Settlement marked as {'paid' if paid else 'unpaid'}"
     })
 
 @app.route('/api/clear/<event_name>', methods=['POST'])

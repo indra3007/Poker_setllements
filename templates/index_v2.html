@@ -17,117 +17,136 @@
             <p class="subtitle">Track events, calculate settlements</p>
         </header>
 
-        <!-- Event Selector -->
-        <div class="event-selector">
-            <label for="event-select">🎯 Event:</label>
-            <select id="event-select">
-                <option value="">-- Select an Event --</option>
-            </select>
-            <button class="btn btn-secondary" id="new-event-btn">+ New Event</button>
+        <!-- Home Screen - Event List -->
+        <div id="home-screen">
+            <div class="home-header">
+                <h2>📋 Your Poker Events</h2>
+                <button class="btn btn-primary btn-large" id="create-new-event-btn">+ Create New Event</button>
+            </div>
+            
+            <div id="events-grid">
+                <!-- Event cards will be dynamically added here -->
+            </div>
+            
+            <div id="no-events-message" class="info-box" style="display: none; text-align: center; margin-top: 40px;">
+                <h3>🎲 No Events Yet</h3>
+                <p>Create your first poker event to get started!</p>
+                <p>Track players, chips, and calculate settlements automatically.</p>
+            </div>
         </div>
 
-        <!-- Tab Navigation -->
-        <div class="tabs">
-            <button class="tab active" data-tab="players">👥 Players</button>
-            <button class="tab" data-tab="settlements">💰 Settlements</button>
-            <button class="tab" data-tab="charts">📊 Charts</button>
-        </div>
-
-        <!-- Players Tab -->
-        <div id="players-tab" class="tab-content active">
-            <div class="action-buttons">
-                <button class="btn btn-primary" id="add-player">+ Add Player</button>
-                <button class="btn btn-success" id="save-data">💾 Save</button>
-                <button class="btn btn-danger" id="clear-data">🗑️ Clear Event</button>
+        <!-- Event View - Hidden by Default -->
+        <div id="event-view" style="display: none;">
+            <!-- Back Button -->
+            <div class="back-button-container">
+                <button class="btn btn-secondary" id="back-to-home">← Back to Events</button>
+                <h2 id="current-event-name" style="display: inline-block; margin-left: 15px; color: #1DA1F2;"></h2>
             </div>
 
-            <div class="table-container">
-                <table id="players-table" class="players-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Phone</th>
-                            <th>Start $</th>
-                            <th>Buy-ins</th>
-                            <th>Day 1</th>
-                            <th>Day 2</th>
-                            <th>Day 3</th>
-                            <th>Day 4</th>
-                            <th>Day 5</th>
-                            <th>Day 6</th>
-                            <th>Day 7</th>
-                            <th>P/L</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="players-tbody">
-                        <!-- Players will be dynamically added here -->
-                    </tbody>
-                    <tfoot>
-                        <tr class="total-row">
-                            <td colspan="3"><strong>TOTALS</strong></td>
-                            <td id="total-buyins">0</td>
-                            <td id="total-day1">$0</td>
-                            <td id="total-day2">$0</td>
-                            <td id="total-day3">$0</td>
-                            <td id="total-day4">$0</td>
-                            <td id="total-day5">$0</td>
-                            <td id="total-day6">$0</td>
-                            <td id="total-day7">$0</td>
-                            <td id="total-pl">$0</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
+            <!-- Tab Navigation -->
+            <div class="tabs">
+                <button class="tab active" data-tab="players">👥 Players</button>
+                <button class="tab" data-tab="settlements">💰 Settlements</button>
+                <button class="tab" data-tab="charts">📊 Charts</button>
             </div>
 
-            <div class="summary-box">
-                <h3>📊 Summary</h3>
-                <div class="summary-grid">
-                    <div class="summary-item">
-                        <span class="label">Total Players:</span>
-                        <span class="value" id="total-players">0</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="label">Total Profit:</span>
-                        <span class="value positive" id="total-profit">$0</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="label">Total Loss:</span>
-                        <span class="value negative" id="total-loss">$0</span>
+            <!-- Players Tab -->
+            <div id="players-tab" class="tab-content active">
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="add-player">+ Add Player</button>
+                    <button class="btn btn-success" id="save-data">💾 Save</button>
+                    <button class="btn btn-danger" id="clear-data">🗑️ Clear Event</button>
+                </div>
+
+                <div class="table-container">
+                    <table id="players-table" class="players-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Start $</th>
+                                <th>Buy-ins</th>
+                                <th>Day 1</th>
+                                <th>Day 2</th>
+                                <th>Day 3</th>
+                                <th>Day 4</th>
+                                <th>Day 5</th>
+                                <th>Day 6</th>
+                                <th>Day 7</th>
+                                <th>P/L</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="players-tbody">
+                            <!-- Players will be dynamically added here -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="3"><strong>TOTALS</strong></td>
+                                <td id="total-buyins">0</td>
+                                <td id="total-day1">$0</td>
+                                <td id="total-day2">$0</td>
+                                <td id="total-day3">$0</td>
+                                <td id="total-day4">$0</td>
+                                <td id="total-day5">$0</td>
+                                <td id="total-day6">$0</td>
+                                <td id="total-day7">$0</td>
+                                <td id="total-pl">$0</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="summary-box">
+                    <h3>📊 Summary</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="label">Total Players:</span>
+                            <span class="value" id="total-players">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Total Profit:</span>
+                            <span class="value positive" id="total-profit">$0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Total Loss:</span>
+                            <span class="value negative" id="total-loss">$0</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Settlements Tab -->
-        <div id="settlements-tab" class="tab-content">
-            <div class="settlements-header">
-                <h2>💰 Smart Settlements</h2>
-                <p>Who pays whom - minimized transactions</p>
+            <!-- Settlements Tab -->
+            <div id="settlements-tab" class="tab-content">
+                <div class="settlements-header">
+                    <h2>💰 Smart Settlements</h2>
+                    <p>Who pays whom - track payments</p>
+                </div>
+
+                <button class="btn btn-primary btn-large" id="calculate-settlements">🔄 Calculate Settlements</button>
+
+                <div id="settlements-container">
+                    <div class="info-box">
+                        <p>💡 Click "Calculate Settlements" to see who pays whom</p>
+                        <p>The algorithm minimizes the number of transactions needed</p>
+                    </div>
+                </div>
             </div>
 
-            <button class="btn btn-primary btn-large" id="calculate-settlements">🔄 Calculate Settlements</button>
+            <!-- Charts Tab -->
+            <div id="charts-tab" class="tab-content">
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="refresh-charts">🔄 Refresh Charts</button>
+                </div>
 
-            <div id="settlements-container">
-                <div class="info-box">
-                    <p>💡 Click "Calculate Settlements" to see who pays whom</p>
-                    <p>The algorithm minimizes the number of transactions needed</p>
+                <div id="charts-container">
+                    <canvas id="profit-loss-chart" style="max-height: 300px; margin-bottom: 20px;"></canvas>
+                    <canvas id="chips-trend-chart" style="max-height: 300px;"></canvas>
                 </div>
             </div>
         </div>
-
-        <!-- Charts Tab -->
-        <div id="charts-tab" class="tab-content">
-            <div class="action-buttons">
-                <button class="btn btn-primary" id="refresh-charts">🔄 Refresh Charts</button>
-            </div>
-
-            <div id="charts-container">
-                <canvas id="profit-loss-chart" style="max-height: 300px; margin-bottom: 20px;"></canvas>
-                <canvas id="chips-trend-chart" style="max-height: 300px;"></canvas>
-            </div>
-        </div>
+        <!-- End of Event View -->
 
         <!-- Footer -->
         <footer>
