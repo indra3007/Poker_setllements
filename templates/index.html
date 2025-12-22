@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🎰 Poker Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🎰 Poker Tracker</h1>
+            <p class="subtitle">Track chips, calculate settlements</p>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="tabs">
+            <button class="tab active" data-tab="players">👥 Players</button>
+            <button class="tab" data-tab="settlements">💰 Settlements</button>
+        </div>
+
+        <!-- Players Tab -->
+        <div id="players-tab" class="tab-content active">
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="add-player">+ Add Player</button>
+                <button class="btn btn-success" id="save-data">💾 Save</button>
+                <button class="btn btn-danger" id="clear-data">🗑️ Clear All</button>
+            </div>
+
+            <div class="table-container">
+                <table id="players-table" class="players-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Start $</th>
+                            <th>Day 1</th>
+                            <th>Day 2</th>
+                            <th>Day 3</th>
+                            <th>Day 4</th>
+                            <th>Day 5</th>
+                            <th>Day 6</th>
+                            <th>Day 7</th>
+                            <th>P/L</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="players-tbody">
+                        <!-- Players will be dynamically added here -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="3"><strong>TOTALS</strong></td>
+                            <td id="total-day1">$0</td>
+                            <td id="total-day2">$0</td>
+                            <td id="total-day3">$0</td>
+                            <td id="total-day4">$0</td>
+                            <td id="total-day5">$0</td>
+                            <td id="total-day6">$0</td>
+                            <td id="total-day7">$0</td>
+                            <td id="total-pl">$0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="summary-box">
+                <h3>📊 Summary</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="label">Total Players:</span>
+                        <span class="value" id="total-players">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Total Profit:</span>
+                        <span class="value positive" id="total-profit">$0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Total Loss:</span>
+                        <span class="value negative" id="total-loss">$0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settlements Tab -->
+        <div id="settlements-tab" class="tab-content">
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="calculate-settlements">🔄 Calculate</button>
+            </div>
+
+            <div id="settlements-container">
+                <div class="info-box">
+                    <p>💡 Click "Calculate" to see who pays whom</p>
+                    <p>The algorithm minimizes the number of transactions needed</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>Made with ❤️ for poker nights</p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
