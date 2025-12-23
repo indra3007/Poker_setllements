@@ -141,37 +141,68 @@ def index():
     """Main page"""
     return render_template('index_v2.html')
 
+@app.route('/test')
+def test():
+    """Test page"""
+    return render_template('test.html')
+
 @app.route('/api/events', methods=['GET'])
 def get_events():
     """Get list of all events"""
-    events = load_events()
-    return jsonify({'events': events})
+    try:
+        print(f"\n=== GET EVENTS CALLED ===")
+        events = load_events()
+        print(f"Events loaded: {events}")
+        result = {'events': events}
+        print(f"Returning: {result}")
+        return jsonify(result)
+    except Exception as e:
+        print(f"❌ Error in get_events: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e), 'events': []}), 500
 
 @app.route('/api/events', methods=['POST'])
 def create_event():
     """Create new event"""
-    data = request.json
-    event_name = data.get('event_name', '').strip()
-    
-    if not event_name:
-        return jsonify({'success': False, 'error': 'Event name required'}), 400
-    
-    events = load_events()
-    
-    # Check if event already exists
-    if event_name in events:
-        return jsonify({'success': False, 'error': 'Event already exists'}), 400
-    
-    events.append(event_name)
-    save_events(events)
-    
-    # Create sheet in Excel
-    wb = create_or_load_workbook()
-    get_or_create_sheet(wb, event_name)
-    wb.save(EXCEL_FILE)
-    wb.close()
-    
-    return jsonify({'success': True, 'event_name': event_name})
+    try:
+        print(f"\n=== CREATE EVENT CALLED ===")
+        print(f"Request JSON: {request.json}")
+        
+        data = request.json
+        event_name = data.get('event_name', '').strip()
+        print(f"Event name: '{event_name}'")
+        
+        if not event_name:
+            return jsonify({'success': False, 'error': 'Event name required'}), 400
+        
+        events = load_events()
+        print(f"Existing events: {events}")
+        
+        # Check if event already exists
+        if event_name in events:
+            return jsonify({'success': False, 'error': 'Event already exists'}), 400
+        
+        events.append(event_name)
+        save_events(events)
+        print(f"Events after save: {events}")
+        
+        # Create sheet in Excel
+        print(f"Creating workbook...")
+        wb = create_or_load_workbook()
+        print(f"Getting/creating sheet: '{event_name}'")
+        get_or_create_sheet(wb, event_name)
+        print(f"Saving workbook...")
+        wb.save(EXCEL_FILE)
+        wb.close()
+        print(f"✅ Event created successfully!")
+        
+        return jsonify({'success': True, 'event_name': event_name})
+    except Exception as e:
+        print(f"❌ Error in create_event: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/events/<event_name>', methods=['DELETE'])
 def delete_event(event_name):

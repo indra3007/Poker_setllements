@@ -39,41 +39,82 @@ function initTabs() {
 // Attach Event Listeners
 function attachEventListeners() {
     console.log('Attaching event listeners...');
-    const createNewBtn = document.getElementById('create-new-event-btn');
-    const createBtn = document.getElementById('create-event-btn');
-    console.log('Create new event button:', createNewBtn);
-    console.log('Create event button:', createBtn);
     
+    // Main button - Create New Event
+    const createNewBtn = document.getElementById('create-new-event-btn');
+    console.log('Create new event button found:', !!createNewBtn);
     if (createNewBtn) {
         createNewBtn.addEventListener('click', () => {
-            console.log('Create new event button clicked!');
+            console.log('✅ Create new event button CLICKED!');
             showEventModal();
         });
+        console.log('✅ Event listener attached to create-new-event-btn');
     } else {
-        console.error('create-new-event-btn not found!');
+        console.error('❌ create-new-event-btn NOT FOUND in DOM');
     }
     
+    // Create button in modal
+    const createBtn = document.getElementById('create-event-btn');
+    console.log('Create event button found:', !!createBtn);
     if (createBtn) {
         createBtn.addEventListener('click', () => {
-            console.log('Create button clicked!');
+            console.log('✅ Create button CLICKED!');
             createEvent();
         });
+        console.log('✅ Event listener attached to create-event-btn');
     } else {
-        console.error('create-event-btn not found!');
+        console.error('❌ create-event-btn NOT FOUND in DOM');
     }
     
-    document.getElementById('cancel-event-btn').addEventListener('click', hideEventModal);
-    document.getElementById('back-to-home').addEventListener('click', showHomeScreen);
-    document.getElementById('add-player').addEventListener('click', addPlayer);
-    document.getElementById('save-data').addEventListener('click', saveData);
-    document.getElementById('calculate-settlements').addEventListener('click', calculateSettlements);
-    document.getElementById('refresh-charts').addEventListener('click', refreshCharts);
-    document.getElementById('clear-data').addEventListener('click', clearEventData);
+    // Cancel button
+    const cancelBtn = document.getElementById('cancel-event-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', hideEventModal);
+        console.log('✅ Event listener attached to cancel-event-btn');
+    }
+    
+    // Back button
+    const backBtn = document.getElementById('back-to-home');
+    if (backBtn) {
+        backBtn.addEventListener('click', showHomeScreen);
+        console.log('✅ Event listener attached to back-to-home');
+    }
+    
+    // Other buttons with null checks
+    const addPlayerBtn = document.getElementById('add-player');
+    if (addPlayerBtn) {
+        addPlayerBtn.addEventListener('click', addPlayer);
+    }
+    
+    const saveBtn = document.getElementById('save-data');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveData);
+    }
+    
+    const settlementsBtn = document.getElementById('calculate-settlements');
+    if (settlementsBtn) {
+        settlementsBtn.addEventListener('click', calculateSettlements);
+    }
+    
+    const chartsBtn = document.getElementById('refresh-charts');
+    if (chartsBtn) {
+        chartsBtn.addEventListener('click', refreshCharts);
+    }
+    
+    const clearBtn = document.getElementById('clear-data');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearEventData);
+    }
     
     // Event name input - Enter key
-    document.getElementById('event-name-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') createEvent();
-    });
+    const eventNameInput = document.getElementById('event-name-input');
+    if (eventNameInput) {
+        eventNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createEvent();
+        });
+    }
+    
+    console.log('✅ attachEventListeners() completed');
 }
 
 // Show Home Screen
@@ -183,22 +224,35 @@ function showEventModal() {
     console.log('showEventModal called');
     const modal = document.getElementById('event-modal');
     console.log('Modal element:', modal);
-    console.log('Modal classes before:', modal.className);
     
-    // Force display with inline style AND remove hidden class
-    modal.style.display = 'flex';
+    // Remove hidden class first
     modal.classList.remove('hidden');
+    
+    // Force display with !important using setAttribute
+    modal.style.setProperty('display', 'flex', 'important');
+    
     console.log('Modal classes after:', modal.className);
     console.log('Modal display style:', modal.style.display);
     
-    document.getElementById('event-name-input').value = '';
+    // Clear input
+    const nameInput = document.getElementById('event-name-input');
+    if (nameInput) {
+        nameInput.value = '';
+    }
     
     // Set default date to today
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('event-date-input').value = today;
-    console.log('Modal should now be visible, date set to:', today);
+    const dateInput = document.getElementById('event-date-input');
+    if (dateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+        console.log('Date set to:', today);
+    }
     
-    document.getElementById('event-name-input').focus();
+    // Focus on name input
+    if (nameInput) {
+        nameInput.focus();
+    }
+    console.log('Modal should now be visible');
 }
 
 // Hide Event Modal
@@ -239,6 +293,7 @@ async function deleteEvent(eventName) {
     } finally {
         showLoading(false);
     }
+}
 
 // Create New Event
 async function createEvent() {
@@ -300,11 +355,23 @@ async function loadEventData(eventName) {
         players = data.players || [];
         
         if (players.length === 0) {
-            addPlayer(); // Add first empty player
-        } else {
-            renderTable();
+            // Add default players on new event
+            const defaultNames = ['Indraneel', 'Gnathi', 'Rupesh', 'Sindhu', 'Umesh', 'Radhika', 'Dileesh', 'Deeraj'];
+            players = defaultNames.map(name => ({
+                name: name,
+                start: 20,
+                buyins: 0,
+                day1: '',
+                day2: '',
+                day3: '',
+                day4: '',
+                day5: '',
+                day6: '',
+                day7: ''
+            }));
         }
         
+        renderTable();
         updateTotals();
         updateSummary();
     } catch (error) {
@@ -345,7 +412,6 @@ async function saveData(silent = false) {
     rows.forEach(row => {
         const player = {
             name: row.querySelector('[data-field="name"]').value,
-            phone: row.querySelector('[data-field="phone"]').value,
             start: parseFloat(row.querySelector('[data-field="start"]').value) || 20,
             buyins: parseInt(row.querySelector('[data-field="buyins"]').value) || 0,
             day1: row.querySelector('[data-field="day1"]').value,
@@ -445,7 +511,6 @@ function addPlayer() {
         if (players[index]) {
             players[index] = {
                 name: row.querySelector('[data-field="name"]').value,
-                phone: row.querySelector('[data-field="phone"]').value,
                 start: parseFloat(row.querySelector('[data-field="start"]').value) || 20,
                 buyins: parseInt(row.querySelector('[data-field="buyins"]').value) || 0,
                 day1: row.querySelector('[data-field="day1"]').value,
@@ -462,7 +527,6 @@ function addPlayer() {
     // Now add new empty player
     const player = {
         name: '',
-        phone: '',
         start: 20,
         buyins: 0,
         day1: '',
@@ -512,7 +576,6 @@ function createTableRow(player, index) {
     
     row.innerHTML = `
         <td><input type="text" data-field="name" value="${player.name || ''}" placeholder="Name"></td>
-        <td><input type="tel" data-field="phone" value="${player.phone || ''}" placeholder="Phone"></td>
         <td><input type="number" data-field="start" value="${player.start || 20}" min="0"></td>
         <td><input type="number" data-field="buyins" value="${player.buyins || 0}" min="0" title="Number of $20 buy-ins"></td>
         <td><input type="number" data-field="day1" value="${player.day1 || ''}" placeholder="0"></td>
@@ -529,6 +592,32 @@ function createTableRow(player, index) {
     // Add input listeners to update totals
     row.querySelectorAll('input').forEach(input => {
         input.addEventListener('input', () => {
+            // Collect current row data
+            const currentPlayer = {
+                name: row.querySelector('[data-field="name"]').value,
+                start: parseFloat(row.querySelector('[data-field="start"]').value) || 20,
+                buyins: parseInt(row.querySelector('[data-field="buyins"]').value) || 0,
+                day1: row.querySelector('[data-field="day1"]').value,
+                day2: row.querySelector('[data-field="day2"]').value,
+                day3: row.querySelector('[data-field="day3"]').value,
+                day4: row.querySelector('[data-field="day4"]').value,
+                day5: row.querySelector('[data-field="day5"]').value,
+                day6: row.querySelector('[data-field="day6"]').value,
+                day7: row.querySelector('[data-field="day7"]').value
+            };
+            
+            // Recalculate P/L for this row
+            const pl = calculatePL(currentPlayer);
+            const plClass = pl > 0 ? 'positive' : pl < 0 ? 'negative' : 'neutral';
+            const plSign = pl > 0 ? '+' : '';
+            
+            // Update P/L cell
+            const plCell = row.querySelector('.pl-cell');
+            if (plCell) {
+                plCell.textContent = `${plSign}$${Math.abs(pl).toFixed(2)}`;
+                plCell.className = `pl-cell ${plClass}`;
+            }
+            
             updateTotals();
             updateSummary();
             scheduleAutoSave(); // Auto-save on input change

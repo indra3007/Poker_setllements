@@ -778,10 +778,15 @@ input[type="number"] {
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .modal.hidden {
-    display: none;
+    display: none !important;
+    opacity: 0;
+    visibility: hidden;
 }
 
 .modal-content {
