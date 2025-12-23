@@ -633,7 +633,7 @@ footer {
 }
 
 .toast.hidden {
-    display: none;
+    display: none !important;
 }
 
 .toast.success {
@@ -641,23 +641,7 @@ footer {
 }
 
 .toast.error {
-    btable-container {
-        padding: 10px;
-    }
-    
-    .players-table {
-        font-size: 0.75em;
-    }
-    
-    .players-table thead th,
-    .players-table tbody td,
-    .players-table tfoot td {
-        padding: 6px 4px;
-    }
-    
-    .summary-grid {
-        grid-template-columns: 1fr;
-    }
+    background: var(--danger);
 }
 
 @media (max-width: 480px) {

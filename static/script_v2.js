@@ -953,9 +953,10 @@ function showLoading(show) {
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     toast.textContent = message;
-    toast.className = `toast ${type} show`;
-    
+    toast.className = `toast ${type}`;
+    toast.classList.remove('hidden');
+
     setTimeout(() => {
-        toast.classList.remove('show');
+        toast.classList.add('hidden');
     }, 3000);
 }
