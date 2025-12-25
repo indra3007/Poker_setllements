@@ -120,21 +120,13 @@ def safe_json_save(filepath, data, backup_filepath=None):
         
         # Write to temporary file first (atomic write)
         # Use restrictive permissions for security
-        temp_fd = os.open(
-            tempfile.mktemp(suffix='.json', dir=os.path.dirname(filepath) or '.'),
-            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-            0o600
-        )
-        temp_path = f"/proc/self/fd/{temp_fd}" if os.path.exists(f"/proc/self/fd/{temp_fd}") else None
-        
-        # Fallback to tempfile.mkstemp if /proc/self/fd doesn't work
-        if not temp_path:
-            os.close(temp_fd)
-            temp_fd, temp_path = tempfile.mkstemp(suffix='.json', text=True)
-            # Set restrictive permissions
-            os.chmod(temp_path, 0o600)
+        dir_path = os.path.dirname(filepath) or '.'
+        temp_fd, temp_path = tempfile.mkstemp(suffix='.json', dir=dir_path, text=True)
         
         try:
+            # Set restrictive permissions for security
+            os.chmod(temp_path, 0o600)
+            
             with os.fdopen(temp_fd, 'w') as f:
                 json.dump(data, f, indent=2)
             
@@ -144,8 +136,11 @@ def safe_json_save(filepath, data, backup_filepath=None):
             return True
         except Exception as e:
             # Clean up temp file if it exists
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
+            try:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+            except:
+                pass
             raise e
     except Exception as e:
         logger.error(f"Error saving {filepath}: {e}")
