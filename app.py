@@ -25,11 +25,26 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'poker-tracker-secret-key-2025'
 
+# Constants
 EXCEL_FILE = 'poker_tracker.xlsx'
 EVENTS_FILE = 'events.json'
 EVENTS_BACKUP_FILE = 'events.json.backup'
 SETTLEMENTS_FILE = 'settlements_tracking.json'
 SETTLEMENTS_BACKUP_FILE = 'settlements_tracking.json.backup'
+FLOAT_PRECISION_EPSILON = 0.01  # For floating point comparisons
+
+def file_or_backup_exists(primary_path, backup_path=None):
+    """
+    Check if primary file or backup file exists.
+    
+    Args:
+        primary_path: Path to primary file
+        backup_path: Path to backup file (optional)
+    
+    Returns:
+        bool: True if either file exists
+    """
+    return os.path.exists(primary_path) or (backup_path and os.path.exists(backup_path))
 
 def safe_json_load(filepath, backup_filepath=None, default_value=None):
     """
@@ -104,7 +119,21 @@ def safe_json_save(filepath, data, backup_filepath=None):
                 logger.warning(f"Failed to create backup: {e}")
         
         # Write to temporary file first (atomic write)
-        temp_fd, temp_path = tempfile.mkstemp(suffix='.json', text=True)
+        # Use restrictive permissions for security
+        temp_fd = os.open(
+            tempfile.mktemp(suffix='.json', dir=os.path.dirname(filepath) or '.'),
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            0o600
+        )
+        temp_path = f"/proc/self/fd/{temp_fd}" if os.path.exists(f"/proc/self/fd/{temp_fd}") else None
+        
+        # Fallback to tempfile.mkstemp if /proc/self/fd doesn't work
+        if not temp_path:
+            os.close(temp_fd)
+            temp_fd, temp_path = tempfile.mkstemp(suffix='.json', text=True)
+            # Set restrictive permissions
+            os.chmod(temp_path, 0o600)
+        
         try:
             with os.fdopen(temp_fd, 'w') as f:
                 json.dump(data, f, indent=2)
@@ -241,9 +270,9 @@ def calculate_settlements(players):
         winners[i] = (winner_name, win_amount - payment)
         losers[j] = (loser_name, loss_amount - payment)
         
-        if winners[i][1] < 0.01:  # Account for floating point precision
+        if winners[i][1] < FLOAT_PRECISION_EPSILON:  # Account for floating point precision
             i += 1
-        if losers[j][1] < 0.01:
+        if losers[j][1] < FLOAT_PRECISION_EPSILON:
             j += 1
     
     return settlements
@@ -259,9 +288,9 @@ def health():
     try:
         # Check if critical files are accessible
         checks = {
-            'events_file': os.path.exists(EVENTS_FILE) or os.path.exists(EVENTS_BACKUP_FILE),
+            'events_file': file_or_backup_exists(EVENTS_FILE, EVENTS_BACKUP_FILE),
             'excel_file': os.path.exists(EXCEL_FILE),
-            'settlements_file': os.path.exists(SETTLEMENTS_FILE) or os.path.exists(SETTLEMENTS_BACKUP_FILE)
+            'settlements_file': file_or_backup_exists(SETTLEMENTS_FILE, SETTLEMENTS_BACKUP_FILE)
         }
         
         # Try to load events to verify file integrity
@@ -515,7 +544,11 @@ def save_event_data(event_name):
             for day in range(1, 8):
                 day_val = player.get(f'day{day}', '')
                 if day_val:
-                    ws.cell(row=row_idx, column=4+day, value=float(day_val))
+                    try:
+                        ws.cell(row=row_idx, column=4+day, value=float(day_val))
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Invalid day{day} value for player {player.get('name')}: {day_val}")
+                        # Leave cell empty if value is invalid
             
             # Calculate P/L and days played
             pl = calculate_pl(player)
