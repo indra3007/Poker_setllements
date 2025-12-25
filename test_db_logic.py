@@ -5,6 +5,7 @@ This tests the SQL queries and logic without requiring actual database connectiv
 """
 
 import re
+import sys
 
 print("=" * 60)
 print("Testing Database Code Logic")
@@ -17,7 +18,7 @@ try:
     print("   ✅ All imports successful")
 except ImportError as e:
     print(f"   ❌ Import error: {e}")
-    exit(1)
+    sys.exit(1)
 
 # Test 2: Check database URL format
 print("\n2. Checking database URL format...")

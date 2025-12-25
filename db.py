@@ -9,6 +9,8 @@ import os
 from contextlib import contextmanager
 
 # Database connection string
+# IMPORTANT: In production, always set DATABASE_URL as an environment variable
+# The default value below is only for initial setup/testing
 DATABASE_URL = os.environ.get(
     'DATABASE_URL',
     'postgresql://poker_settlements_user:39d1mKqYkt252OAVwEfFFK1vDnPuIEWN@dpg-d56rrvre5dus73cvg310-a.oregon-postgres.render.com/poker_settlements'
@@ -178,7 +180,7 @@ def save_event_players(event_name, players):
             # Handle empty string values for day fields
             day_values = []
             for day in ['day1', 'day2', 'day3', 'day4', 'day5', 'day6', 'day7']:
-                val = player.get(f'{day}', '')
+                val = player.get(day, '')
                 day_values.append(float(val) if val and val != '' else None)
             
             cursor.execute('''

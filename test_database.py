@@ -4,6 +4,7 @@ Test script for database operations
 """
 
 import db
+import sys
 
 print("=" * 60)
 print("Testing PostgreSQL Database Operations")
@@ -16,7 +17,7 @@ try:
     print("   ✅ Database initialized successfully")
 except Exception as e:
     print(f"   ❌ Error: {e}")
-    exit(1)
+    sys.exit(1)
 
 # Test 2: Create an event
 print("\n2. Creating test event...")

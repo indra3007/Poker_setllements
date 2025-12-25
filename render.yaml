@@ -9,3 +9,5 @@ services:
         value: 3.9.0
       - key: PORT
         value: 10000
+      # Note: DATABASE_URL should be configured in Render dashboard as a secret environment variable
+      # Format: postgresql://user:password@host/database
