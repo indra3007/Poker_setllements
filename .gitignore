@@ -41,5 +41,9 @@ Thumbs.db
 # Data files (keep data local during development)
 *.xlsx
 
+# Old JSON storage files (replaced by PostgreSQL)
+events.json
+settlements_tracking.json
+
 # Logs
 *.log
