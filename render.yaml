@@ -9,3 +9,8 @@ services:
         value: 3.9.0
       - key: PORT
         value: 10000
+      - key: DATABASE_URL
+        sync: false
+        # IMPORTANT: Set DATABASE_URL in Render Dashboard under Environment settings
+        # Do NOT commit actual credentials to version control
+        # See RENDER_SETUP.md for configuration instructions
