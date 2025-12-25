@@ -11,7 +11,7 @@ from contextlib import contextmanager
 # Database connection string
 DATABASE_URL = os.environ.get(
     'DATABASE_URL',
-    'postgresql://poker_settlements_user:39d1mKqYkt252OAVwEfFFK1vDnPuIEWN@dpg-d56rrvre5dus73cvg310-a/poker_settlements'
+    'postgresql://poker_settlements_user:39d1mKqYkt252OAVwEfFFK1vDnPuIEWN@dpg-d56rrvre5dus73cvg310-a.oregon-postgres.render.com/poker_settlements'
 )
 
 
@@ -20,9 +20,15 @@ def get_db_connection():
     """Context manager for database connections with automatic cleanup"""
     conn = None
     try:
-        conn = psycopg2.connect(DATABASE_URL)
+        # Add SSL mode for Render.com PostgreSQL databases
+        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
         yield conn
         conn.commit()
+    except psycopg2.OperationalError as e:
+        if conn:
+            conn.rollback()
+        print(f"Database connection error: {e}")
+        raise Exception("Unable to connect to the database. Please check your connection string and network connectivity.")
     except Exception as e:
         if conn:
             conn.rollback()
