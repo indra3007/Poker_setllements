@@ -9,7 +9,7 @@ import json
 import requests
 import base64
 import time
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class GitHubIntegration:
         
         self.api_base = 'https://api.github.com'
         self.headers = {
-            'Accept': 'application/vnd.github.v3+json',
+            'Accept': 'application/vnd.github.v3+json',  # Using v3 API (stable and well-supported)
             'User-Agent': 'Poker-Tracker-App'
         }
         
@@ -54,7 +54,7 @@ class GitHubIntegration:
         """Check if GitHub integration is enabled"""
         return self.enabled
     
-    def test_authentication(self) -> tuple[bool, Optional[str]]:
+    def test_authentication(self) -> Tuple[bool, Optional[str]]:
         """
         Test GitHub authentication.
         
@@ -109,7 +109,7 @@ class GitHubIntegration:
             return None
     
     def commit_events_file(self, events: list, commit_message: str = "Update events.json", 
-                          max_retries: int = 3) -> tuple[bool, Optional[str]]:
+                          max_retries: int = 3) -> Tuple[bool, Optional[str]]:
         """
         Commit events.json to GitHub repository.
         
@@ -199,7 +199,7 @@ class GitHubIntegration:
         # All retries failed
         return False, f"Failed after {max_retries} attempts: {last_error}"
     
-    def get_repository_info(self) -> tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
+    def get_repository_info(self) -> Tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
         """
         Get repository information.
         
