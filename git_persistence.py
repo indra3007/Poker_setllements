@@ -157,7 +157,7 @@ class GitPersistence:
         
         if not success or not stdout.strip():
             logger.info("Configuring git user...")
-            self._run_git_command(['git', 'config', 'user.email', 'app@pokertarcker.local'])
+            self._run_git_command(['git', 'config', 'user.email', 'app@pokertracker.local'])
             self._run_git_command(['git', 'config', 'user.name', 'Poker Tracker App'])
     
     def commit_changes(self, message: str) -> bool:

@@ -121,7 +121,7 @@ Currently, the module uses default Git configuration. For production deployments
 # render.yaml
 envVars:
   - key: GIT_USER_EMAIL
-    value: app@pokertaracker.local
+    value: app@pokertracker.local
   - key: GIT_USER_NAME
     value: Poker Tracker App
 ```
