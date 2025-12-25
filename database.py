@@ -104,7 +104,7 @@ def db_save_event(event_name):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO events (event_name) VALUES (%s) ON CONFLICT DO NOTHING",
+            "INSERT INTO events (event_name) VALUES (%s) ON CONFLICT (event_name) DO NOTHING",
             (event_name,)
         )
         return True
@@ -150,6 +150,12 @@ def db_save_players(event_name, players):
         
         # Insert new player data
         for player in players:
+            # Helper function to convert empty string to None, but keep 0 and other falsy numbers
+            def to_db_value(val):
+                if val == '' or val is None:
+                    return None
+                return val
+            
             cursor.execute("""
                 INSERT INTO players (
                     event_name, name, phone, start_chips, buyins,
@@ -161,13 +167,13 @@ def db_save_players(event_name, players):
                 player.get('phone', ''),
                 player.get('start', 20),
                 player.get('buyins', 0),
-                player.get('day1') or None,
-                player.get('day2') or None,
-                player.get('day3') or None,
-                player.get('day4') or None,
-                player.get('day5') or None,
-                player.get('day6') or None,
-                player.get('day7') or None,
+                to_db_value(player.get('day1')),
+                to_db_value(player.get('day2')),
+                to_db_value(player.get('day3')),
+                to_db_value(player.get('day4')),
+                to_db_value(player.get('day5')),
+                to_db_value(player.get('day6')),
+                to_db_value(player.get('day7')),
                 player.get('pl', 0),
                 player.get('days_played', 0)
             ))

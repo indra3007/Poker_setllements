@@ -19,10 +19,11 @@ For security reasons, the database credentials are **NOT** stored in `render.yam
 
 3. **Set DATABASE_URL**
    - **Key**: `DATABASE_URL`
-   - **Value**: 
+   - **Value**: Your PostgreSQL connection string
      ```
-     postgresql://poker_settlements_user:39d1mKqYkt252OAVwEfFFK1vDnPuIEWN@dpg-d56rrvre5dus73cvg310-a/poker_settlements
+     postgresql://[username]:[password]@[host]:[port]/[database]
      ```
+   - **Note**: Use the actual credentials provided by your database administrator
 
 4. **Save and Redeploy**
    - Click "Save Changes"
@@ -83,15 +84,21 @@ DATABASE_URL=postgresql://localhost:5432/poker_tracker_dev
 
 ## Database Credentials Reference
 
-Keep these credentials secure and only use them where needed:
+**SECURITY NOTE**: This section is for reference only. Actual credentials should be:
+- Provided securely by your database administrator
+- Configured only in secure environment variables
+- Never committed to version control
+- Never shared publicly
 
-- **Username**: `poker_settlements_user`
-- **Password**: `39d1mKqYkt252OAVwEfFFK1vDnPuIEWN`
-- **Host**: `dpg-d56rrvre5dus73cvg310-a`
-- **Database**: `poker_settlements`
-- **Connection String**: `postgresql://poker_settlements_user:39d1mKqYkt252OAVwEfFFK1vDnPuIEWN@dpg-d56rrvre5dus73cvg310-a/poker_settlements`
+### Connection String Format
 
-**IMPORTANT**: 
-- Do not commit these credentials to version control
-- Do not share these credentials publicly
-- Only use them in secure environment variable configurations
+```
+postgresql://[USERNAME]:[PASSWORD]@[HOST]:[PORT]/[DATABASE_NAME]
+```
+
+**Example** (with placeholder values):
+```
+postgresql://my_user:my_secure_password@my-db-host.render.com:5432/my_database
+```
+
+Replace the placeholders with your actual database credentials when configuring the environment variable.

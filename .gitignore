@@ -43,6 +43,7 @@ Thumbs.db
 
 # Environment variables
 .env
+CREDENTIALS.txt
 
 # Logs
 *.log
