@@ -2,6 +2,7 @@
 """
 Poker Tracker Web App - Version 2
 With Event/Session Management and Quick Player Selection
+PostgreSQL Database Integration
 """
 
 from flask import Flask, render_template, request, jsonify
@@ -10,35 +11,83 @@ from openpyxl.styles import Font, PatternFill, Alignment
 import os
 from datetime import datetime
 import json
+from dotenv import load_dotenv
+
+# Load environment variables from .env file (for local development)
+load_dotenv()
+
+# Import database functions
+from database import (
+    init_database, db_load_events, db_save_event, db_delete_event,
+    db_load_players, db_save_players, db_clear_players,
+    db_load_settlement_payments, db_save_settlement_payment
+)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'poker-tracker-secret-key-2025'
+
+# Check if DATABASE_URL is configured
+DATABASE_URL = os.environ.get('DATABASE_URL')
+USE_DATABASE = DATABASE_URL is not None
 
 EXCEL_FILE = 'poker_tracker.xlsx'
 EVENTS_FILE = 'events.json'
 SETTLEMENTS_FILE = 'settlements_tracking.json'
 
 def load_settlement_payments():
-    """Load settlement payment tracking from JSON"""
+    """Load settlement payment tracking from database or JSON"""
+    if USE_DATABASE:
+        try:
+            return db_load_settlement_payments()
+        except Exception as e:
+            print(f"❌ Database error, falling back to JSON: {e}")
+    
+    # Use JSON file
     if os.path.exists(SETTLEMENTS_FILE):
         with open(SETTLEMENTS_FILE, 'r') as f:
             return json.load(f)
     return {}
 
 def save_settlement_payments(payments):
-    """Save settlement payment tracking to JSON"""
+    """Save settlement payment tracking to database or JSON"""
+    if USE_DATABASE:
+        try:
+            # Payments are saved individually, not as a batch
+            # This function is kept for backward compatibility
+            return
+        except Exception as e:
+            print(f"❌ Database error, falling back to JSON: {e}")
+    
+    # Use JSON file
     with open(SETTLEMENTS_FILE, 'w') as f:
         json.dump(payments, f, indent=2)
 
 def load_events():
-    """Load events list from JSON file"""
+    """Load events list from database or JSON file"""
+    if USE_DATABASE:
+        try:
+            return db_load_events()
+        except Exception as e:
+            print(f"❌ Database error, falling back to JSON: {e}")
+            # Fallback to JSON if database fails
+    
+    # Use JSON file
     if os.path.exists(EVENTS_FILE):
         with open(EVENTS_FILE, 'r') as f:
             return json.load(f)
     return []
 
 def save_events(events):
-    """Save events list to JSON file"""
+    """Save events list to database or JSON file"""
+    if USE_DATABASE:
+        try:
+            # Events are saved individually in create_event, not as a batch
+            # This function is kept for backward compatibility
+            return
+        except Exception as e:
+            print(f"❌ Database error, falling back to JSON: {e}")
+    
+    # Use JSON file
     with open(EVENTS_FILE, 'w') as f:
         json.dump(events, f, indent=2)
 
@@ -183,11 +232,20 @@ def create_event():
         if event_name in events:
             return jsonify({'success': False, 'error': 'Event already exists'}), 400
         
-        events.append(event_name)
-        save_events(events)
-        print(f"Events after save: {events}")
+        # Save to database or JSON
+        if USE_DATABASE:
+            try:
+                db_save_event(event_name)
+                print(f"✅ Event saved to database")
+            except Exception as e:
+                print(f"❌ Database error: {e}")
+                return jsonify({'success': False, 'error': f'Database error: {str(e)}'}), 500
+        else:
+            events.append(event_name)
+            save_events(events)
+            print(f"Events after save: {events}")
         
-        # Create sheet in Excel
+        # Create sheet in Excel (for backward compatibility)
         print(f"Creating workbook...")
         wb = create_or_load_workbook()
         print(f"Getting/creating sheet: '{event_name}'")
@@ -212,11 +270,28 @@ def delete_event(event_name):
     if event_name not in events:
         return jsonify({'success': False, 'error': 'Event not found'}), 404
     
-    # Remove from events list
-    events.remove(event_name)
-    save_events(events)
+    # Delete from database or JSON
+    if USE_DATABASE:
+        try:
+            db_delete_event(event_name)
+        except Exception as e:
+            print(f"Error deleting event from database: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    else:
+        # Remove from events list
+        events.remove(event_name)
+        save_events(events)
+        
+        # Remove settlement tracking for this event
+        try:
+            settlements = load_settlement_payments()
+            if event_name in settlements:
+                del settlements[event_name]
+                save_settlement_payments(settlements)
+        except Exception as e:
+            print(f"Error deleting settlement tracking: {e}")
     
-    # Remove sheet from Excel
+    # Remove sheet from Excel (for backward compatibility)
     try:
         wb = create_or_load_workbook()
         if event_name in wb.sheetnames:
@@ -226,20 +301,20 @@ def delete_event(event_name):
     except Exception as e:
         print(f"Error deleting sheet: {e}")
     
-    # Remove settlement tracking for this event
-    try:
-        settlements = load_settlement_payments()
-        if event_name in settlements:
-            del settlements[event_name]
-            save_settlement_payments(settlements)
-    except Exception as e:
-        print(f"Error deleting settlement tracking: {e}")
-    
     return jsonify({'success': True})
 
 @app.route('/api/data/<event_name>', methods=['GET'])
 def get_event_data(event_name):
     """Get data for specific event"""
+    if USE_DATABASE:
+        try:
+            players = db_load_players(event_name)
+            return jsonify({'players': players})
+        except Exception as e:
+            print(f"❌ Database error in get_event_data: {e}")
+            return jsonify({'players': [], 'error': str(e)}), 500
+    
+    # Fallback to Excel
     wb = create_or_load_workbook()
     
     if event_name not in wb.sheetnames:
@@ -282,6 +357,17 @@ def save_event_data(event_name):
     data = request.json
     players = data.get('players', [])
     
+    if USE_DATABASE:
+        try:
+            db_save_players(event_name, players)
+            return jsonify({'success': True, 'message': 'Data saved successfully to database'})
+        except Exception as e:
+            print(f"❌ Database error in save_event_data: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    # Fallback to Excel
     wb = create_or_load_workbook()
     ws = get_or_create_sheet(wb, event_name)
     
@@ -320,6 +406,41 @@ def save_event_data(event_name):
 @app.route('/api/settlements/<event_name>', methods=['GET'])
 def get_event_settlements(event_name):
     """Calculate settlements for specific event"""
+    if USE_DATABASE:
+        try:
+            players_data = db_load_players(event_name)
+            players = []
+            for player in players_data:
+                name = player.get('name')
+                pl = player.get('pl', 0)
+                if name and pl != 0:
+                    players.append({'name': name, 'pl': float(pl)})
+            
+            if not players:
+                return jsonify({'settlements': [], 'message': 'No player data found'})
+            
+            settlements = calculate_settlements(players)
+            
+            # Load payment status for this event
+            event_payments = db_load_settlement_payments(event_name)
+            
+            # Add payment status to each settlement
+            for settlement in settlements:
+                settlement_key = f"{settlement['from']}→{settlement['to']}"
+                settlement['paid'] = event_payments.get(settlement_key, False)
+            
+            return jsonify({
+                'settlements': settlements,
+                'total_winners': sum(p['pl'] for p in players if p['pl'] > 0),
+                'total_losers': abs(sum(p['pl'] for p in players if p['pl'] < 0))
+            })
+        except Exception as e:
+            print(f"❌ Database error in get_event_settlements: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'settlements': [], 'error': str(e)}), 500
+    
+    # Fallback to Excel
     wb = create_or_load_workbook()
     
     if event_name not in wb.sheetnames:
@@ -367,6 +488,18 @@ def mark_settlement_paid(event_name):
     to_player = data.get('to')
     paid = data.get('paid', True)
     
+    if USE_DATABASE:
+        try:
+            db_save_settlement_payment(event_name, from_player, to_player, paid)
+            return jsonify({
+                'success': True,
+                'message': f"Settlement marked as {'paid' if paid else 'unpaid'}"
+            })
+        except Exception as e:
+            print(f"❌ Database error in mark_settlement_paid: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    # Fallback to JSON
     settlement_key = f"{from_player}→{to_player}"
     
     # Load existing payment tracking
@@ -390,6 +523,15 @@ def mark_settlement_paid(event_name):
 @app.route('/api/clear/<event_name>', methods=['POST'])
 def clear_event_data(event_name):
     """Clear data for specific event"""
+    if USE_DATABASE:
+        try:
+            db_clear_players(event_name)
+            return jsonify({'success': True, 'message': f'Event "{event_name}" cleared successfully'})
+        except Exception as e:
+            print(f"❌ Database error in clear_event_data: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    # Fallback to Excel
     wb = create_or_load_workbook()
     
     if event_name in wb.sheetnames:
@@ -404,6 +546,22 @@ def clear_event_data(event_name):
     return jsonify({'success': True, 'message': f'Event "{event_name}" cleared successfully'})
 
 if __name__ == '__main__':
+    # Initialize database if DATABASE_URL is set
+    if USE_DATABASE:
+        print("\n🔗 Database Configuration:")
+        print("=" * 50)
+        print(f"DATABASE_URL is configured: {bool(DATABASE_URL)}")
+        print("Initializing database schema...")
+        if init_database():
+            print("✅ Database initialized successfully!")
+        else:
+            print("❌ Database initialization failed!")
+            print("⚠️  Falling back to file-based storage (JSON/Excel)")
+        print("=" * 50 + "\n")
+    else:
+        print("\n⚠️  DATABASE_URL not set - Using file-based storage (JSON/Excel)")
+        print("=" * 50 + "\n")
+    
     create_or_load_workbook()
     
     # Get port from environment variable (for deployment) or use 5001 for local

@@ -41,5 +41,8 @@ Thumbs.db
 # Data files (keep data local during development)
 *.xlsx
 
+# Environment variables
+.env
+
 # Logs
 *.log
