@@ -82,6 +82,10 @@ def commit_and_push_changes(message="Update event storage"):
     try:
         logger.info("Starting git commit and push process")
         
+        # Sanitize commit message to prevent command injection
+        # Remove shell metacharacters and limit length
+        safe_message = message.replace('"', '\\"').replace('$', '').replace('`', '')[:200]
+        
         # Check if we're in a git repository
         result = subprocess.run(
             ['git', 'rev-parse', '--git-dir'],
@@ -117,16 +121,16 @@ def commit_and_push_changes(message="Update event storage"):
             return True
         
         # Commit the changes
-        logger.info(f"Committing changes with message: {message}")
+        logger.info(f"Committing changes with message: {safe_message}")
         subprocess.run(
-            ['git', 'commit', '-m', message],
+            ['git', 'commit', '-m', safe_message],
             capture_output=True,
             text=True,
             timeout=10,
             check=True
         )
         
-        # Push to remote
+        # Push to remote (Note: This blocks the request thread for up to 30 seconds)
         logger.info("Pushing changes to remote")
         result = subprocess.run(
             ['git', 'push'],
@@ -139,14 +143,16 @@ def commit_and_push_changes(message="Update event storage"):
             logger.info("Changes pushed successfully")
             return True
         else:
-            logger.warning(f"Push failed: {result.stderr}")
+            # Log warning without exposing full stderr for security
+            logger.warning("Push failed - check git configuration and credentials")
             return False
             
     except subprocess.TimeoutExpired:
         logger.error("Git operation timed out")
         return False
     except subprocess.CalledProcessError as e:
-        logger.error(f"Git operation failed: {e.stderr if e.stderr else str(e)}")
+        # CalledProcessError may not have stderr, use generic error message
+        logger.error(f"Git operation failed with return code {e.returncode}")
         return False
     except Exception as e:
         logger.error(f"Unexpected error during git operations: {e}")
