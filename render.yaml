@@ -9,3 +9,11 @@ services:
         value: 3.9.0
       - key: PORT
         value: 10000
+      - key: GITHUB_TOKEN
+        sync: false  # Set this in Render dashboard for security
+      - key: GITHUB_OWNER
+        value: indra3007
+      - key: GITHUB_REPO
+        value: Poker_setllements
+      - key: GITHUB_BRANCH
+        value: main
