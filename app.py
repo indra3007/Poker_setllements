@@ -10,12 +10,21 @@ from openpyxl.styles import Font, PatternFill, Alignment
 import os
 from datetime import datetime
 import json
+import logging
+import subprocess
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'poker-tracker-secret-key-2025'
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 EXCEL_FILE = 'poker_tracker.xlsx'
-EVENTS_FILE = 'events.json'
+EVENTS_FILE = 'event_storage.json'
 SETTLEMENTS_FILE = 'settlements_tracking.json'
 
 def load_settlement_payments():
@@ -31,16 +40,117 @@ def save_settlement_payments(payments):
         json.dump(payments, f, indent=2)
 
 def load_events():
-    """Load events list from JSON file"""
-    if os.path.exists(EVENTS_FILE):
+    """Load events list from JSON file with error handling"""
+    try:
+        logger.info(f"Loading events from {EVENTS_FILE}")
+        
+        if not os.path.exists(EVENTS_FILE):
+            logger.warning(f"{EVENTS_FILE} does not exist, creating empty list")
+            return []
+        
+        # Check if file is empty
+        if os.path.getsize(EVENTS_FILE) == 0:
+            logger.warning(f"{EVENTS_FILE} is empty, returning empty list")
+            return []
+        
         with open(EVENTS_FILE, 'r') as f:
-            return json.load(f)
-    return []
+            try:
+                events = json.load(f)
+                logger.info(f"Successfully loaded {len(events)} events")
+                return events
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error in {EVENTS_FILE}: {e}")
+                logger.warning("Returning empty list due to corrupted file")
+                return []
+    except Exception as e:
+        logger.error(f"Error loading events: {e}")
+        return []
 
 def save_events(events):
-    """Save events list to JSON file"""
-    with open(EVENTS_FILE, 'w') as f:
-        json.dump(events, f, indent=2)
+    """Save events list to JSON file with logging"""
+    try:
+        logger.info(f"Saving {len(events)} events to {EVENTS_FILE}")
+        with open(EVENTS_FILE, 'w') as f:
+            json.dump(events, f, indent=2)
+        logger.info("Events saved successfully")
+    except Exception as e:
+        logger.error(f"Error saving events: {e}")
+        raise
+
+def commit_and_push_changes(message="Update event storage"):
+    """Commit and push changes to the event_storage.json file"""
+    try:
+        logger.info("Starting git commit and push process")
+        
+        # Check if we're in a git repository
+        result = subprocess.run(
+            ['git', 'rev-parse', '--git-dir'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if result.returncode != 0:
+            logger.warning("Not in a git repository, skipping commit")
+            return False
+        
+        # Add the event_storage.json file
+        logger.info(f"Adding {EVENTS_FILE} to git")
+        subprocess.run(
+            ['git', 'add', EVENTS_FILE],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=True
+        )
+        
+        # Check if there are changes to commit
+        result = subprocess.run(
+            ['git', 'diff', '--cached', '--quiet', EVENTS_FILE],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if result.returncode == 0:
+            logger.info("No changes to commit")
+            return True
+        
+        # Commit the changes
+        logger.info(f"Committing changes with message: {message}")
+        subprocess.run(
+            ['git', 'commit', '-m', message],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True
+        )
+        
+        # Push to remote
+        logger.info("Pushing changes to remote")
+        result = subprocess.run(
+            ['git', 'push'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode == 0:
+            logger.info("Changes pushed successfully")
+            return True
+        else:
+            logger.warning(f"Push failed: {result.stderr}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        logger.error("Git operation timed out")
+        return False
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Git operation failed: {e.stderr if e.stderr else str(e)}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error during git operations: {e}")
+        return False
 
 def get_or_create_sheet(wb, sheet_name):
     """Get existing sheet or create new one"""
@@ -187,6 +297,14 @@ def create_event():
         save_events(events)
         print(f"Events after save: {events}")
         
+        # Commit and push changes to Git
+        commit_message = f"Add event: {event_name}"
+        commit_success = commit_and_push_changes(commit_message)
+        if commit_success:
+            logger.info("Event changes committed and pushed to repository")
+        else:
+            logger.warning("Event saved locally but not pushed to repository")
+        
         # Create sheet in Excel
         print(f"Creating workbook...")
         wb = create_or_load_workbook()
@@ -215,6 +333,14 @@ def delete_event(event_name):
     # Remove from events list
     events.remove(event_name)
     save_events(events)
+    
+    # Commit and push changes to Git
+    commit_message = f"Delete event: {event_name}"
+    commit_success = commit_and_push_changes(commit_message)
+    if commit_success:
+        logger.info("Event deletion committed and pushed to repository")
+    else:
+        logger.warning("Event deleted locally but not pushed to repository")
     
     # Remove sheet from Excel
     try:
