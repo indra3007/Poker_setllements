@@ -10,13 +10,17 @@ from openpyxl.styles import Font, PatternFill, Alignment
 import os
 from datetime import datetime
 import json
+from git_persistence import GitPersistence
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'poker-tracker-secret-key-2025'
 
 EXCEL_FILE = 'poker_tracker.xlsx'
-EVENTS_FILE = 'events.json'
+EVENTS_FILE = 'event_storage.json'  # Renamed from events.json
 SETTLEMENTS_FILE = 'settlements_tracking.json'
+
+# Initialize Git persistence handler
+git_persistence = GitPersistence(storage_file=EVENTS_FILE)
 
 def load_settlement_payments():
     """Load settlement payment tracking from JSON"""
@@ -31,16 +35,27 @@ def save_settlement_payments(payments):
         json.dump(payments, f, indent=2)
 
 def load_events():
-    """Load events list from JSON file"""
-    if os.path.exists(EVENTS_FILE):
-        with open(EVENTS_FILE, 'r') as f:
-            return json.load(f)
-    return []
+    """Load events list from JSON file using Git persistence"""
+    try:
+        events = git_persistence.load_events()
+        print(f"Loaded events from persistent storage: {events}")
+        return events
+    except Exception as e:
+        print(f"Error loading events: {e}")
+        return []
 
 def save_events(events):
-    """Save events list to JSON file"""
-    with open(EVENTS_FILE, 'w') as f:
-        json.dump(events, f, indent=2)
+    """Save events list to JSON file and commit to Git"""
+    try:
+        success = git_persistence.save_events(events, auto_commit=True)
+        if success:
+            print(f"Events saved and committed to Git: {events}")
+        else:
+            print(f"Warning: Events saved locally but Git commit may have failed")
+        return success
+    except Exception as e:
+        print(f"Error saving events: {e}")
+        return False
 
 def get_or_create_sheet(wb, sheet_name):
     """Get existing sheet or create new one"""

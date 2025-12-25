@@ -41,5 +41,8 @@ Thumbs.db
 # Data files (keep data local during development)
 *.xlsx
 
+# Track event_storage.json for persistence
+!event_storage.json
+
 # Logs
 *.log
