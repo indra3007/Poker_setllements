@@ -50,15 +50,8 @@ def load_settlement_payments():
 
 def save_settlement_payments(payments):
     """Save settlement payment tracking to database or JSON"""
-    if USE_DATABASE:
-        try:
-            # Payments are saved individually, not as a batch
-            # This function is kept for backward compatibility
-            return
-        except Exception as e:
-            print(f"❌ Database error, falling back to JSON: {e}")
-    
-    # Use JSON file
+    # Always save to JSON for fallback, even when using database
+    # The database approach uses individual inserts in mark_settlement_paid
     with open(SETTLEMENTS_FILE, 'w') as f:
         json.dump(payments, f, indent=2)
 
@@ -66,28 +59,27 @@ def load_events():
     """Load events list from database or JSON file"""
     if USE_DATABASE:
         try:
-            return db_load_events()
+            events = db_load_events()
+            print(f"📊 Events loaded from database: {events}")
+            return events
         except Exception as e:
             print(f"❌ Database error, falling back to JSON: {e}")
             # Fallback to JSON if database fails
     
     # Use JSON file
+    print(f"📂 Checking for JSON file: {EVENTS_FILE}, exists: {os.path.exists(EVENTS_FILE)}")
     if os.path.exists(EVENTS_FILE):
         with open(EVENTS_FILE, 'r') as f:
-            return json.load(f)
+            events = json.load(f)
+            print(f"📊 Events loaded from JSON: {events}")
+            return events
+    print("📊 No events file found, returning empty list")
     return []
 
 def save_events(events):
     """Save events list to database or JSON file"""
-    if USE_DATABASE:
-        try:
-            # Events are saved individually in create_event, not as a batch
-            # This function is kept for backward compatibility
-            return
-        except Exception as e:
-            print(f"❌ Database error, falling back to JSON: {e}")
-    
-    # Use JSON file
+    # Always save to JSON for fallback, even when using database
+    # The database approach uses individual inserts in create_event
     with open(EVENTS_FILE, 'w') as f:
         json.dump(events, f, indent=2)
 
@@ -238,8 +230,11 @@ def create_event():
                 db_save_event(event_name)
                 print(f"✅ Event saved to database")
             except Exception as e:
-                print(f"❌ Database error: {e}")
-                return jsonify({'success': False, 'error': f'Database error: {str(e)}'}), 500
+                print(f"❌ Database error, falling back to JSON: {e}")
+                # Fallback to JSON
+                events.append(event_name)
+                save_events(events)
+                print(f"✅ Event saved to JSON fallback")
         else:
             events.append(event_name)
             save_events(events)
@@ -275,8 +270,19 @@ def delete_event(event_name):
         try:
             db_delete_event(event_name)
         except Exception as e:
-            print(f"Error deleting event from database: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
+            print(f"Error deleting event from database, using fallback: {e}")
+            # Fallback to JSON
+            events.remove(event_name)
+            save_events(events)
+            
+            # Remove settlement tracking for this event
+            try:
+                settlements = load_settlement_payments()
+                if event_name in settlements:
+                    del settlements[event_name]
+                    save_settlement_payments(settlements)
+            except Exception as se:
+                print(f"Error deleting settlement tracking: {se}")
     else:
         # Remove from events list
         events.remove(event_name)
@@ -311,8 +317,8 @@ def get_event_data(event_name):
             players = db_load_players(event_name)
             return jsonify({'players': players})
         except Exception as e:
-            print(f"❌ Database error in get_event_data: {e}")
-            return jsonify({'players': [], 'error': str(e)}), 500
+            print(f"❌ Database error in get_event_data, using fallback: {e}")
+            # Fall through to Excel fallback
     
     # Fallback to Excel
     wb = create_or_load_workbook()
@@ -360,12 +366,43 @@ def save_event_data(event_name):
     if USE_DATABASE:
         try:
             db_save_players(event_name, players)
+            # Also save to Excel for backward compatibility
+            wb = create_or_load_workbook()
+            ws = get_or_create_sheet(wb, event_name)
+            
+            # Clear existing data (keep headers)
+            for row_idx in range(2, ws.max_row + 1):
+                for col_idx in range(1, 14):
+                    ws.cell(row=row_idx, column=col_idx, value='')
+            
+            # Write new data
+            for idx, player in enumerate(players):
+                row_idx = idx + 2
+                
+                ws.cell(row=row_idx, column=1, value=player.get('name', ''))
+                ws.cell(row=row_idx, column=2, value=player.get('phone', ''))
+                ws.cell(row=row_idx, column=3, value=player.get('start', 20))
+                ws.cell(row=row_idx, column=4, value=player.get('buyins', 0))
+                
+                # Day values
+                for day in range(1, 8):
+                    day_val = player.get(f'day{day}', '')
+                    if day_val:
+                        ws.cell(row=row_idx, column=4+day, value=float(day_val))
+                
+                # P/L and days played
+                ws.cell(row=row_idx, column=12, value=player.get('pl', 0))
+                ws.cell(row=row_idx, column=13, value=player.get('days_played', 0))
+            
+            wb.save(EXCEL_FILE)
+            wb.close()
+            
             return jsonify({'success': True, 'message': 'Data saved successfully to database'})
         except Exception as e:
-            print(f"❌ Database error in save_event_data: {e}")
+            print(f"❌ Database error in save_event_data, using fallback: {e}")
             import traceback
             traceback.print_exc()
-            return jsonify({'success': False, 'error': str(e)}), 500
+            # Fall through to Excel fallback
     
     # Fallback to Excel
     wb = create_or_load_workbook()
@@ -435,10 +472,10 @@ def get_event_settlements(event_name):
                 'total_losers': abs(sum(p['pl'] for p in players if p['pl'] < 0))
             })
         except Exception as e:
-            print(f"❌ Database error in get_event_settlements: {e}")
+            print(f"❌ Database error in get_event_settlements, using fallback: {e}")
             import traceback
             traceback.print_exc()
-            return jsonify({'settlements': [], 'error': str(e)}), 500
+            # Fall through to Excel fallback
     
     # Fallback to Excel
     wb = create_or_load_workbook()
@@ -496,8 +533,8 @@ def mark_settlement_paid(event_name):
                 'message': f"Settlement marked as {'paid' if paid else 'unpaid'}"
             })
         except Exception as e:
-            print(f"❌ Database error in mark_settlement_paid: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
+            print(f"❌ Database error in mark_settlement_paid, using fallback: {e}")
+            # Fall through to JSON fallback
     
     # Fallback to JSON
     settlement_key = f"{from_player}→{to_player}"
@@ -526,12 +563,11 @@ def clear_event_data(event_name):
     if USE_DATABASE:
         try:
             db_clear_players(event_name)
-            return jsonify({'success': True, 'message': f'Event "{event_name}" cleared successfully'})
         except Exception as e:
-            print(f"❌ Database error in clear_event_data: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
+            print(f"❌ Database error in clear_event_data, using fallback: {e}")
+            # Fall through to Excel fallback
     
-    # Fallback to Excel
+    # Also clear Excel for backward compatibility
     wb = create_or_load_workbook()
     
     if event_name in wb.sheetnames:
