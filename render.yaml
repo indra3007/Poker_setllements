@@ -10,4 +10,6 @@ services:
       - key: PORT
         value: 10000
       - key: DATABASE_URL
-        value: postgresql://poker_settlements_user:39d1mKqYkt252OAVwEfFFK1vDnPuIEWN@dpg-d56rrvre5dus73cvg310-a/poker_settlements
+        sync: false
+        # Set DATABASE_URL in Render Dashboard under Environment settings
+        # Value should be: postgresql://poker_settlements_user:39d1mKqYkt252OAVwEfFFK1vDnPuIEWN@dpg-d56rrvre5dus73cvg310-a/poker_settlements
