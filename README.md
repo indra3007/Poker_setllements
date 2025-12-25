@@ -12,7 +12,7 @@ A mobile-friendly web application for tracking poker game chip counts and calcul
 - 💰 **Automatic P/L Calculation**: Real-time profit/loss tracking
 - 🔄 **Smart Settlements**: Minimizes number of transactions needed
 - 📱 **Mobile-Responsive**: Works perfectly on iPhone/Android
-- 💾 **Data Persistence**: Excel-based storage
+- 💾 **Data Persistence**: PostgreSQL database storage with automatic Excel export
 - ⚡ **Live Totals**: See totals update as you type
 - 🎨 **Modern UI**: Clean, professional design
 
@@ -53,20 +53,21 @@ python app.py
 - **Starting Chips**: $20 per player per day
 - **P/L Calculation**: (Final Chips) - (Starting Chips + Additional Buy-ins)
 - **Settlement Algorithm**: Greedy matching - pairs biggest winners with biggest losers
-- **Storage**: All data saved to `poker_tracker.xlsx`
+- **Storage**: All data saved to PostgreSQL database (with optional Excel export for backup)
 
 ## File Structure
 
 ```
 poker_web/
 ├── app.py                 # Flask backend
+├── db.py                  # PostgreSQL database module
 ├── templates/
 │   └── index.html        # HTML template
 ├── static/
 │   ├── style.css         # Mobile-responsive CSS
 │   └── script.js         # Frontend JavaScript
 ├── requirements.txt      # Python dependencies
-└── poker_tracker.xlsx    # Data storage (created automatically)
+└── poker_tracker.xlsx    # Optional Excel export (created automatically)
 ```
 
 ## API Endpoints
@@ -102,12 +103,40 @@ Deploy to Heroku, PythonAnywhere, or DigitalOcean for worldwide access!
 
 **Data not saving?**
 - Check console for errors (F12 in browser)
-- Make sure `poker_tracker.xlsx` is not open in Excel
-- Check file permissions
+- Verify database connection is working
+- Check that the DATABASE_URL environment variable is set correctly
+
+## Database Configuration
+
+The application uses PostgreSQL for data persistence. The database connection can be configured using:
+
+1. **Environment Variable** (recommended for production):
+   ```bash
+   export DATABASE_URL="postgresql://user:password@host/database"
+   ```
+
+2. **Default Connection String** (fallback):
+   The application includes a default connection string in `db.py` that can be updated for your environment.
+
+### Database Tables
+
+The application automatically creates the following tables on startup:
+
+- **events**: Stores event names and creation timestamps
+- **players**: Stores player data for each event (chips, buy-ins, P/L)
+- **settlement_payments**: Tracks which settlements have been paid
+
+### Security Features
+
+- ✅ All SQL queries use parameterized queries (prevents SQL injection)
+- ✅ SSL/TLS encryption required for database connections
+- ✅ Graceful error handling for connection failures
 
 ## Made With
 
 - Flask (Python web framework)
+- PostgreSQL (Database)
+- psycopg2 (PostgreSQL adapter)
 - Vanilla JavaScript (no frameworks!)
 - CSS3 (mobile-first responsive design)
 - OpenPyXL (Excel file handling)
