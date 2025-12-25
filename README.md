@@ -15,6 +15,7 @@ A mobile-friendly web application for tracking poker game chip counts and calcul
 - 💾 **Data Persistence**: Excel-based storage
 - ⚡ **Live Totals**: See totals update as you type
 - 🎨 **Modern UI**: Clean, professional design
+- 🔗 **GitHub Integration**: Automatically commits events to repository (optional)
 
 ## 🚀 Quick Start
 
@@ -71,10 +72,27 @@ poker_web/
 
 ## API Endpoints
 
-- `GET /api/data` - Get all player data
-- `POST /api/save` - Save player data
-- `GET /api/settlements` - Calculate settlements
-- `POST /api/clear` - Clear all data
+- `GET /api/health` - Health check with GitHub integration status
+- `GET /api/events` - Get list of all events
+- `POST /api/events` - Create new event (automatically commits to GitHub if configured)
+- `DELETE /api/events/<event_name>` - Delete an event
+- `GET /api/data/<event_name>` - Get all player data for an event
+- `POST /api/save/<event_name>` - Save player data for an event
+- `GET /api/settlements/<event_name>` - Calculate settlements for an event
+- `POST /api/clear/<event_name>` - Clear all data for an event
+
+## GitHub Integration (Optional)
+
+The application can automatically commit event changes to GitHub. This ensures data persists across deployments and provides version control.
+
+**Setup**: See [GITHUB_INTEGRATION.md](GITHUB_INTEGRATION.md) for detailed setup instructions.
+
+**Quick Setup**:
+1. Create a GitHub Personal Access Token with `repo` scope
+2. Set environment variable: `export GITHUB_TOKEN='your_token_here'`
+3. Restart the application
+
+The app works perfectly without GitHub integration - it's completely optional!
 
 ## Tips
 

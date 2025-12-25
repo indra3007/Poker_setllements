@@ -10,6 +10,14 @@ from openpyxl.styles import Font, PatternFill, Alignment
 import os
 from datetime import datetime
 import json
+import logging
+from github_integration import GitHubIntegration
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'poker-tracker-secret-key-2025'
@@ -17,6 +25,10 @@ app.config['SECRET_KEY'] = 'poker-tracker-secret-key-2025'
 EXCEL_FILE = 'poker_tracker.xlsx'
 EVENTS_FILE = 'events.json'
 SETTLEMENTS_FILE = 'settlements_tracking.json'
+
+# Initialize GitHub integration
+github = GitHubIntegration()
+logger = logging.getLogger(__name__)
 
 def load_settlement_payments():
     """Load settlement payment tracking from JSON"""
@@ -38,9 +50,19 @@ def load_events():
     return []
 
 def save_events(events):
-    """Save events list to JSON file"""
+    """Save events list to JSON file and commit to GitHub"""
     with open(EVENTS_FILE, 'w') as f:
         json.dump(events, f, indent=2)
+    
+    # Try to commit to GitHub if enabled
+    if github.is_enabled():
+        success, error = github.commit_events_file(events, "Update events via Poker Tracker app")
+        if not success:
+            logger.warning(f"Failed to commit events to GitHub: {error}")
+        else:
+            logger.info("Successfully committed events to GitHub")
+    else:
+        logger.info("GitHub integration disabled, events saved locally only")
 
 def get_or_create_sheet(wb, sheet_name):
     """Get existing sheet or create new one"""
@@ -140,6 +162,28 @@ def calculate_settlements(players):
 def index():
     """Main page"""
     return render_template('index_v2.html')
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint with GitHub integration status"""
+    github_status = {
+        'enabled': github.is_enabled(),
+        'configured': bool(github.token),
+        'owner': github.owner,
+        'repo': github.repo,
+        'branch': github.branch
+    }
+    
+    if github.is_enabled():
+        auth_success, auth_error = github.test_authentication()
+        github_status['authenticated'] = auth_success
+        if not auth_success:
+            github_status['error'] = auth_error
+    
+    return jsonify({
+        'status': 'ok',
+        'github': github_status
+    })
 
 @app.route('/test')
 def test():
