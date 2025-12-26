@@ -40,7 +40,9 @@ Thumbs.db
 
 # Data files (keep data local during development)
 *.xlsx
+*.json.backup
 events.json
+event_storage.json
 settlements_tracking.json
 
 # Logs
