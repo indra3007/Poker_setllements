@@ -1,83 +1,24 @@
 #!/usr/bin/env python3
 """
-Poker Tracker Web App - Version 2
-With Event/Session Management and Quick Player Selection
+Poker Tracker Web App - Version 3 with PostgreSQL
+With Event/Session Management and Database Integration
 """
 
 from flask import Flask, render_template, request, jsonify
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment
 import os
 from datetime import datetime
-import json
+from dotenv import load_dotenv
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy import desc
+
+# Load environment variables
+load_dotenv()
+
+from database import get_db, close_db, engine
+from models import Event, Player, SettlementPayment
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'poker-tracker-secret-key-2025'
-
-EXCEL_FILE = 'poker_tracker.xlsx'
-EVENTS_FILE = 'events.json'
-SETTLEMENTS_FILE = 'settlements_tracking.json'
-
-def load_settlement_payments():
-    """Load settlement payment tracking from JSON"""
-    if os.path.exists(SETTLEMENTS_FILE):
-        with open(SETTLEMENTS_FILE, 'r') as f:
-            return json.load(f)
-    return {}
-
-def save_settlement_payments(payments):
-    """Save settlement payment tracking to JSON"""
-    with open(SETTLEMENTS_FILE, 'w') as f:
-        json.dump(payments, f, indent=2)
-
-def load_events():
-    """Load events list from JSON file"""
-    if os.path.exists(EVENTS_FILE):
-        with open(EVENTS_FILE, 'r') as f:
-            return json.load(f)
-    return []
-
-def save_events(events):
-    """Save events list to JSON file"""
-    with open(EVENTS_FILE, 'w') as f:
-        json.dump(events, f, indent=2)
-
-def get_or_create_sheet(wb, sheet_name):
-    """Get existing sheet or create new one"""
-    if sheet_name in wb.sheetnames:
-        return wb[sheet_name]
-    
-    # Create new sheet
-    ws = wb.create_sheet(sheet_name)
-    
-    # Headers
-    headers = ['Player Name', 'Phone', 'Start', 'Buy-ins', 'Day 1 End', 'Day 2 End', 'Day 3 End', 
-               'Day 4 End', 'Day 5 End', 'Day 6 End', 'Day 7 End', 'P/L ($)', 'Days Played']
-    ws.append(headers)
-    
-    # Style header row
-    header_fill = PatternFill(start_color='1DA1F2', end_color='1DA1F2', fill_type='solid')
-    header_font = Font(bold=True, color='FFFFFF', size=12)
-    
-    for cell in ws[1]:
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-    
-    return ws
-
-def create_or_load_workbook():
-    """Create new workbook or load existing one"""
-    if os.path.exists(EXCEL_FILE):
-        return openpyxl.load_workbook(EXCEL_FILE)
-    
-    # Create new workbook
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Events"
-    ws.append(['Event List'])
-    wb.save(EXCEL_FILE)
-    return wb
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'poker-tracker-secret-key-2025')
 
 def calculate_pl(player_data):
     """Calculate P/L based on last filled day and buy-ins"""
@@ -149,22 +90,39 @@ def test():
 @app.route('/api/events', methods=['GET'])
 def get_events():
     """Get list of all events"""
+    db = None
     try:
         print(f"\n=== GET EVENTS CALLED ===")
-        events = load_events()
-        print(f"Events loaded: {events}")
-        result = {'events': events}
+        db = get_db()
+        
+        # Query all events
+        events = db.query(Event).order_by(Event.created_at.desc()).all()
+        event_names = [event.name for event in events]
+        
+        print(f"Events loaded from DB: {event_names}")
+        result = {'events': event_names}
         print(f"Returning: {result}")
+        
         return jsonify(result)
+        
+    except SQLAlchemyError as e:
+        print(f"❌ Database error in get_events: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Database error', 'events': []}), 500
     except Exception as e:
         print(f"❌ Error in get_events: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e), 'events': []}), 500
+    finally:
+        if db:
+            close_db(db)
 
 @app.route('/api/events', methods=['POST'])
 def create_event():
     """Create new event"""
+    db = None
     try:
         print(f"\n=== CREATE EVENT CALLED ===")
         print(f"Request JSON: {request.json}")
@@ -176,246 +134,349 @@ def create_event():
         if not event_name:
             return jsonify({'success': False, 'error': 'Event name required'}), 400
         
-        events = load_events()
-        print(f"Existing events: {events}")
+        db = get_db()
         
         # Check if event already exists
-        if event_name in events:
+        existing_event = db.query(Event).filter(Event.name == event_name).first()
+        if existing_event:
             return jsonify({'success': False, 'error': 'Event already exists'}), 400
         
-        events.append(event_name)
-        save_events(events)
-        print(f"Events after save: {events}")
+        # Create new event
+        new_event = Event(name=event_name)
+        db.add(new_event)
+        db.commit()
         
-        # Create sheet in Excel
-        print(f"Creating workbook...")
-        wb = create_or_load_workbook()
-        print(f"Getting/creating sheet: '{event_name}'")
-        get_or_create_sheet(wb, event_name)
-        print(f"Saving workbook...")
-        wb.save(EXCEL_FILE)
-        wb.close()
-        print(f"✅ Event created successfully!")
+        print(f"✅ Event created successfully: {event_name}")
         
         return jsonify({'success': True, 'event_name': event_name})
+        
+    except IntegrityError as e:
+        if db:
+            db.rollback()
+        print(f"❌ Integrity error in create_event: {e}")
+        return jsonify({'success': False, 'error': 'Event already exists'}), 400
+    except SQLAlchemyError as e:
+        if db:
+            db.rollback()
+        print(f"❌ Database error in create_event: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Database error'}), 500
     except Exception as e:
+        if db:
+            db.rollback()
         print(f"❌ Error in create_event: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if db:
+            close_db(db)
 
 @app.route('/api/events/<event_name>', methods=['DELETE'])
 def delete_event(event_name):
     """Delete an event"""
-    events = load_events()
-    
-    if event_name not in events:
-        return jsonify({'success': False, 'error': 'Event not found'}), 404
-    
-    # Remove from events list
-    events.remove(event_name)
-    save_events(events)
-    
-    # Remove sheet from Excel
+    db = None
     try:
-        wb = create_or_load_workbook()
-        if event_name in wb.sheetnames:
-            del wb[event_name]
-            wb.save(EXCEL_FILE)
-        wb.close()
+        db = get_db()
+        
+        # Find event
+        event = db.query(Event).filter(Event.name == event_name).first()
+        if not event:
+            return jsonify({'success': False, 'error': 'Event not found'}), 404
+        
+        # Delete event (cascade will delete players and settlements)
+        db.delete(event)
+        db.commit()
+        
+        return jsonify({'success': True})
+        
+    except SQLAlchemyError as e:
+        if db:
+            db.rollback()
+        print(f"❌ Database error in delete_event: {e}")
+        return jsonify({'success': False, 'error': 'Database error'}), 500
     except Exception as e:
-        print(f"Error deleting sheet: {e}")
-    
-    # Remove settlement tracking for this event
-    try:
-        settlements = load_settlement_payments()
-        if event_name in settlements:
-            del settlements[event_name]
-            save_settlement_payments(settlements)
-    except Exception as e:
-        print(f"Error deleting settlement tracking: {e}")
-    
-    return jsonify({'success': True})
+        if db:
+            db.rollback()
+        print(f"Error deleting event: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if db:
+            close_db(db)
 
 @app.route('/api/data/<event_name>', methods=['GET'])
 def get_event_data(event_name):
     """Get data for specific event"""
-    wb = create_or_load_workbook()
-    
-    if event_name not in wb.sheetnames:
-        wb.close()
-        return jsonify({'players': []})
-    
-    ws = wb[event_name]
-    players = []
-    
-    # Read data from sheet (skip header row)
-    for row_idx in range(2, ws.max_row + 1):
-        row = ws[row_idx]
-        player_data = {
-            'row': row_idx,
-            'name': row[0].value or '',
-            'phone': row[1].value or '',
-            'start': row[2].value or 20,
-            'buyins': row[3].value or 0,
-            'day1': row[4].value or '',
-            'day2': row[5].value or '',
-            'day3': row[6].value or '',
-            'day4': row[7].value or '',
-            'day5': row[8].value or '',
-            'day6': row[9].value or '',
-            'day7': row[10].value or '',
-            'pl': row[11].value or 0,
-            'days_played': row[12].value or 0
-        }
+    db = None
+    try:
+        db = get_db()
         
-        # Only include rows with names
-        if player_data['name']:
-            players.append(player_data)
-    
-    wb.close()
-    return jsonify({'players': players})
+        # Find event
+        event = db.query(Event).filter(Event.name == event_name).first()
+        if not event:
+            return jsonify({'players': []})
+        
+        # Get all players for this event
+        players = db.query(Player).filter(Player.event_id == event.id).order_by(Player.row_order).all()
+        
+        players_data = [player.to_dict() for player in players]
+        
+        return jsonify({'players': players_data})
+        
+    except SQLAlchemyError as e:
+        print(f"❌ Database error in get_event_data: {e}")
+        return jsonify({'players': []}), 500
+    except Exception as e:
+        print(f"Error getting event data: {e}")
+        return jsonify({'players': []}), 500
+    finally:
+        if db:
+            close_db(db)
 
 @app.route('/api/save/<event_name>', methods=['POST'])
 def save_event_data(event_name):
     """Save data for specific event"""
-    data = request.json
-    players = data.get('players', [])
-    
-    wb = create_or_load_workbook()
-    ws = get_or_create_sheet(wb, event_name)
-    
-    # Clear existing data (keep headers)
-    for row_idx in range(2, ws.max_row + 1):
-        for col_idx in range(1, 14):
-            ws.cell(row=row_idx, column=col_idx, value='')
-    
-    # Write new data
-    for idx, player in enumerate(players):
-        row_idx = idx + 2
+    db = None
+    try:
+        data = request.json
+        players_data = data.get('players', [])
         
-        ws.cell(row=row_idx, column=1, value=player.get('name', ''))
-        ws.cell(row=row_idx, column=2, value=player.get('phone', ''))
-        ws.cell(row=row_idx, column=3, value=player.get('start', 20))
-        ws.cell(row=row_idx, column=4, value=player.get('buyins', 0))  # Save buy-ins!
+        db = get_db()
         
-        # Day values
-        for day in range(1, 8):
-            day_val = player.get(f'day{day}', '')
-            if day_val:
-                ws.cell(row=row_idx, column=4+day, value=float(day_val))
+        # Find or create event
+        event = db.query(Event).filter(Event.name == event_name).first()
+        if not event:
+            event = Event(name=event_name)
+            db.add(event)
+            db.commit()
+            db.refresh(event)
         
-        # Calculate P/L and days played
-        pl = calculate_pl(player)
-        days_played = sum(1 for day in range(1, 8) if player.get(f'day{day}'))
+        # Delete existing players for this event
+        db.query(Player).filter(Player.event_id == event.id).delete()
         
-        ws.cell(row=row_idx, column=12, value=pl)
-        ws.cell(row=row_idx, column=13, value=days_played)
-    
-    wb.save(EXCEL_FILE)
-    wb.close()
-    
-    return jsonify({'success': True, 'message': 'Data saved successfully'})
+        # Add new players
+        for idx, player_data in enumerate(players_data):
+            if not player_data.get('name'):
+                continue
+                
+            # Calculate P/L and days played
+            pl = calculate_pl(player_data)
+            days_played = sum(1 for day in range(1, 8) if player_data.get(f'day{day}'))
+            
+            # Create player with basic fields
+            player = Player(
+                event_id=event.id,
+                name=player_data.get('name', ''),
+                phone=player_data.get('phone', ''),
+                start=float(player_data.get('start', 20)),
+                buyins=int(player_data.get('buyins', 0)),
+                pl=pl,
+                days_played=days_played,
+                row_order=idx
+            )
+            
+            # Set day values using loop to reduce duplication
+            for day_num in range(1, 8):
+                day_key = f'day{day_num}'
+                day_value = player_data.get(day_key)
+                if day_value:
+                    setattr(player, day_key, float(day_value))
+            
+            db.add(player)
+        
+        db.commit()
+        
+        return jsonify({'success': True, 'message': 'Data saved successfully'})
+        
+    except SQLAlchemyError as e:
+        if db:
+            db.rollback()
+        print(f"❌ Database error in save_event_data: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    except Exception as e:
+        if db:
+            db.rollback()
+        print(f"Error saving event data: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if db:
+            close_db(db)
 
 @app.route('/api/settlements/<event_name>', methods=['GET'])
 def get_event_settlements(event_name):
     """Calculate settlements for specific event"""
-    wb = create_or_load_workbook()
-    
-    if event_name not in wb.sheetnames:
-        wb.close()
-        return jsonify({'settlements': []})
-    
-    ws = wb[event_name]
-    players = []
-    
-    for row_idx in range(2, ws.max_row + 1):
-        row = ws[row_idx]
-        name = row[0].value
-        pl = row[11].value or 0
+    db = None
+    try:
+        db = get_db()
         
-        if name and pl != 0:
-            players.append({'name': name, 'pl': float(pl)})
-    
-    wb.close()
-    
-    if not players:
-        return jsonify({'settlements': [], 'message': 'No player data found'})
-    
-    settlements = calculate_settlements(players)
-    
-    # Load payment status for this event
-    payment_tracking = load_settlement_payments()
-    event_payments = payment_tracking.get(event_name, {})
-    
-    # Add payment status to each settlement
-    for settlement in settlements:
-        settlement_key = f"{settlement['from']}→{settlement['to']}"
-        settlement['paid'] = event_payments.get(settlement_key, False)
-    
-    return jsonify({
-        'settlements': settlements,
-        'total_winners': sum(p['pl'] for p in players if p['pl'] > 0),
-        'total_losers': abs(sum(p['pl'] for p in players if p['pl'] < 0))
-    })
+        # Find event
+        event = db.query(Event).filter(Event.name == event_name).first()
+        if not event:
+            return jsonify({'settlements': []})
+        
+        # Get all players with non-zero P/L
+        players = db.query(Player).filter(
+            Player.event_id == event.id,
+            Player.pl != 0
+        ).all()
+        
+        if not players:
+            return jsonify({'settlements': [], 'message': 'No player data found'})
+        
+        players_data = [{'name': p.name, 'pl': float(p.pl)} for p in players]
+        settlements = calculate_settlements(players_data)
+        
+        # Load payment status for this event
+        settlement_payments = db.query(SettlementPayment).filter(
+            SettlementPayment.event_id == event.id
+        ).all()
+        
+        # Create a lookup dictionary for payment status
+        payment_status = {
+            f"{sp.from_player}→{sp.to_player}": sp.paid
+            for sp in settlement_payments
+        }
+        
+        # Add payment status to each settlement
+        for settlement in settlements:
+            settlement_key = f"{settlement['from']}→{settlement['to']}"
+            settlement['paid'] = payment_status.get(settlement_key, False)
+        
+        return jsonify({
+            'settlements': settlements,
+            'total_winners': sum(p['pl'] for p in players_data if p['pl'] > 0),
+            'total_losers': abs(sum(p['pl'] for p in players_data if p['pl'] < 0))
+        })
+        
+    except SQLAlchemyError as e:
+        print(f"❌ Database error in get_event_settlements: {e}")
+        return jsonify({'settlements': []}), 500
+    except Exception as e:
+        print(f"Error getting settlements: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'settlements': []}), 500
+    finally:
+        if db:
+            close_db(db)
 
 @app.route('/api/settlements/<event_name>/mark_paid', methods=['POST'])
 def mark_settlement_paid(event_name):
     """Mark a settlement as paid or unpaid"""
-    data = request.json
-    from_player = data.get('from')
-    to_player = data.get('to')
-    paid = data.get('paid', True)
-    
-    settlement_key = f"{from_player}→{to_player}"
-    
-    # Load existing payment tracking
-    payment_tracking = load_settlement_payments()
-    
-    # Initialize event tracking if not exists
-    if event_name not in payment_tracking:
-        payment_tracking[event_name] = {}
-    
-    # Update payment status
-    payment_tracking[event_name][settlement_key] = paid
-    
-    # Save back to file
-    save_settlement_payments(payment_tracking)
-    
-    return jsonify({
-        'success': True,
-        'message': f"Settlement marked as {'paid' if paid else 'unpaid'}"
-    })
+    db = None
+    try:
+        data = request.json
+        from_player = data.get('from')
+        to_player = data.get('to')
+        paid = data.get('paid', True)
+        
+        db = get_db()
+        
+        # Find event
+        event = db.query(Event).filter(Event.name == event_name).first()
+        if not event:
+            return jsonify({'success': False, 'error': 'Event not found'}), 404
+        
+        # Find or create settlement payment record
+        settlement = db.query(SettlementPayment).filter(
+            SettlementPayment.event_id == event.id,
+            SettlementPayment.from_player == from_player,
+            SettlementPayment.to_player == to_player
+        ).first()
+        
+        if settlement:
+            # Update existing record
+            settlement.paid = paid
+            settlement.updated_at = datetime.utcnow()
+        else:
+            # Create new record
+            amount = data.get('amount', 0)
+            settlement = SettlementPayment(
+                event_id=event.id,
+                from_player=from_player,
+                to_player=to_player,
+                amount=amount,
+                paid=paid
+            )
+            db.add(settlement)
+        
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f"Settlement marked as {'paid' if paid else 'unpaid'}"
+        })
+        
+    except SQLAlchemyError as e:
+        if db:
+            db.rollback()
+        print(f"❌ Database error in mark_settlement_paid: {e}")
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    except Exception as e:
+        if db:
+            db.rollback()
+        print(f"Error marking settlement: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if db:
+            close_db(db)
 
 @app.route('/api/clear/<event_name>', methods=['POST'])
 def clear_event_data(event_name):
     """Clear data for specific event"""
-    wb = create_or_load_workbook()
-    
-    if event_name in wb.sheetnames:
-        ws = wb[event_name]
-        # Keep headers, clear data rows
-        for row_idx in range(2, ws.max_row + 1):
-            for col_idx in range(1, 14):
-                ws.cell(row=row_idx, column=col_idx, value='')
-        wb.save(EXCEL_FILE)
-    
-    wb.close()
-    return jsonify({'success': True, 'message': f'Event "{event_name}" cleared successfully'})
+    db = None
+    try:
+        db = get_db()
+        
+        # Find event
+        event = db.query(Event).filter(Event.name == event_name).first()
+        if not event:
+            return jsonify({'success': False, 'error': 'Event not found'}), 404
+        
+        # Delete all players for this event
+        db.query(Player).filter(Player.event_id == event.id).delete()
+        db.commit()
+        
+        return jsonify({'success': True, 'message': f'Event "{event_name}" cleared successfully'})
+        
+    except SQLAlchemyError as e:
+        if db:
+            db.rollback()
+        print(f"❌ Database error in clear_event_data: {e}")
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    except Exception as e:
+        if db:
+            db.rollback()
+        print(f"Error clearing event data: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if db:
+            close_db(db)
 
 if __name__ == '__main__':
-    create_or_load_workbook()
+    # Test database connection on startup
+    try:
+        with engine.connect() as conn:
+            print("✅ Database connection successful!")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not connect to database: {e}")
+        print("Application will start but database operations will fail.")
     
     # Get port from environment variable (for deployment) or use 5001 for local
     port = int(os.environ.get('PORT', 5001))
     
     # Check if running in production
-    is_production = os.environ.get('RENDER', False)
+    is_production = os.environ.get('RENDER', False) or os.environ.get('FLASK_ENV') == 'production'
     
-    print("\n🎰 Poker Tracker Web App v2 - Event Management")
+    print("\n🎰 Poker Tracker Web App v3 - PostgreSQL Edition")
     print("=" * 50)
     if is_production:
-        print("🌐 Production Mode - Deployed on Render")
+        print("🌐 Production Mode")
     else:
         print("🌐 Development Mode - Running Locally")
         print("📱 Open on your phone:")
