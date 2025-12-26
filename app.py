@@ -269,13 +269,13 @@ def get_event_data(event_name):
             'phone': row[1].value or '',
             'start': row[2].value or 20,
             'buyins': row[3].value or 0,
-            'day1': row[4].value or '',
-            'day2': row[5].value or '',
-            'day3': row[6].value or '',
-            'day4': row[7].value or '',
-            'day5': row[8].value or '',
-            'day6': row[9].value or '',
-            'day7': row[10].value or '',
+            'day1': row[4].value if row[4].value is not None else '',
+            'day2': row[5].value if row[5].value is not None else '',
+            'day3': row[6].value if row[6].value is not None else '',
+            'day4': row[7].value if row[7].value is not None else '',
+            'day5': row[8].value if row[8].value is not None else '',
+            'day6': row[9].value if row[9].value is not None else '',
+            'day7': row[10].value if row[10].value is not None else '',
             'pl': row[11].value or 0,
             'days_played': row[12].value or 0
         }
@@ -313,12 +313,14 @@ def save_event_data(event_name):
         # Day values
         for day in range(1, 8):
             day_val = player.get(f'day{day}', '')
-            if day_val:
+            # Save if value exists and is not empty string
+            if day_val != '' and day_val is not None:
                 ws.cell(row=row_idx, column=4+day, value=float(day_val))
         
         # Calculate P/L and days played
         pl = calculate_pl(player)
-        days_played = sum(1 for day in range(1, 8) if player.get(f'day{day}'))
+        days_played = sum(1 for day in range(1, 8) 
+                         if player.get(f'day{day}') != '' and player.get(f'day{day}') is not None)
         
         ws.cell(row=row_idx, column=12, value=pl)
         ws.cell(row=row_idx, column=13, value=days_played)
