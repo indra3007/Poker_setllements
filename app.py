@@ -29,6 +29,7 @@ app.config['SECRET_KEY'] = 'poker-tracker-secret-key-2025'
 EXCEL_FILE = 'poker_tracker.xlsx'
 EVENTS_FILE = 'events.json'
 EVENTS_BACKUP_FILE = 'events.json.backup'
+LEGACY_EVENTS_FILE = 'event_storage.json'  # For backwards compatibility with PR #1
 SETTLEMENTS_FILE = 'settlements_tracking.json'
 SETTLEMENTS_BACKUP_FILE = 'settlements_tracking.json.backup'
 FLOAT_PRECISION_EPSILON = 0.01  # For floating point comparisons
@@ -163,7 +164,20 @@ def save_settlement_payments(payments):
     )
 
 def load_events():
-    """Load events list from JSON file with error handling"""
+    """Load events list from JSON file with error handling and backwards compatibility"""
+    # Check for legacy event_storage.json file from PR #1 and migrate if needed
+    if not os.path.exists(EVENTS_FILE) and os.path.exists(LEGACY_EVENTS_FILE):
+        logger.info(f"Migrating from {LEGACY_EVENTS_FILE} to {EVENTS_FILE}")
+        try:
+            with open(LEGACY_EVENTS_FILE, 'r') as f:
+                events = json.load(f)
+            # Save to new location using safe save
+            if save_events(events):
+                logger.info(f"Successfully migrated {len(events)} events")
+            return events
+        except Exception as e:
+            logger.error(f"Failed to migrate from {LEGACY_EVENTS_FILE}: {e}")
+    
     return safe_json_load(
         EVENTS_FILE,
         EVENTS_BACKUP_FILE,

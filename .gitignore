@@ -42,6 +42,7 @@ Thumbs.db
 *.xlsx
 *.json.backup
 events.json
+event_storage.json
 settlements_tracking.json
 
 # Logs
