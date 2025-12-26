@@ -80,27 +80,38 @@ def create_or_load_workbook():
     return wb
 
 def calculate_pl(player_data):
-    """Calculate P/L based on last filled day and buy-ins"""
+    """Calculate P/L by summing profit/loss from all days played"""
     start = player_data.get('start', 20)
     buyins = player_data.get('buyins', 0)
+    
+    # Sum P/L from each day
+    total_pl = 0
     days_played = 0
-    last_value = start
     
     for day in range(1, 8):
         day_key = f'day{day}'
-        if day_key in player_data and player_data[day_key]:
+        if day_key in player_data:
+            day_value = player_data[day_key]
+            # Skip empty strings and None, but allow 0
+            if day_value == '' or day_value is None:
+                continue
             try:
+                day_value = float(day_value)
+                # Each day's P/L is: ending chips - starting chips for that day
+                day_pl = day_value - start
+                total_pl += day_pl
                 days_played += 1
-                last_value = float(player_data[day_key])
-            except:
+            except (ValueError, TypeError):
+                # Skip invalid values
                 pass
     
     if days_played == 0:
         return 0
     
-    total_investment = start + (buyins * 20)
-    pl = last_value - total_investment
-    return round(pl, 2)
+    # Subtract buy-in costs from total P/L
+    total_pl -= (buyins * 20)
+    
+    return round(total_pl, 2)
 
 def calculate_settlements(players):
     """Calculate optimal settlements using greedy algorithm"""
