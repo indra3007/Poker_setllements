@@ -264,23 +264,25 @@ def save_event_data(event_name):
             pl = calculate_pl(player_data)
             days_played = sum(1 for day in range(1, 8) if player_data.get(f'day{day}'))
             
+            # Create player with basic fields
             player = Player(
                 event_id=event.id,
                 name=player_data.get('name', ''),
                 phone=player_data.get('phone', ''),
                 start=float(player_data.get('start', 20)),
                 buyins=int(player_data.get('buyins', 0)),
-                day1=float(player_data.get('day1')) if player_data.get('day1') else None,
-                day2=float(player_data.get('day2')) if player_data.get('day2') else None,
-                day3=float(player_data.get('day3')) if player_data.get('day3') else None,
-                day4=float(player_data.get('day4')) if player_data.get('day4') else None,
-                day5=float(player_data.get('day5')) if player_data.get('day5') else None,
-                day6=float(player_data.get('day6')) if player_data.get('day6') else None,
-                day7=float(player_data.get('day7')) if player_data.get('day7') else None,
                 pl=pl,
                 days_played=days_played,
                 row_order=idx
             )
+            
+            # Set day values using loop to reduce duplication
+            for day_num in range(1, 8):
+                day_key = f'day{day_num}'
+                day_value = player_data.get(day_key)
+                if day_value:
+                    setattr(player, day_key, float(day_value))
+            
             db.add(player)
         
         db.commit()

@@ -11,7 +11,7 @@ class Event(Base):
     __tablename__ = 'events'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(255), unique=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
