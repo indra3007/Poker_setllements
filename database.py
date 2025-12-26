@@ -19,12 +19,9 @@ DB_PASSWORD = os.getenv('DB_PASSWORD')
 
 # Validate required environment variables
 if not all([DB_HOST, DB_NAME, DB_USER, DB_PASSWORD]):
-    import sys
     print("❌ ERROR: Missing required database environment variables!")
     print("Required: DB_HOST, DB_NAME, DB_USER, DB_PASSWORD")
     print("Please create a .env file based on .env.example")
-    # Don't exit in case this is being imported for testing
-    # sys.exit(1)
 
 # Construct database URL
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

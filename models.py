@@ -52,24 +52,23 @@ class Player(Base):
     
     def to_dict(self):
         """Convert player to dictionary"""
-        return {
+        result = {
             'id': self.id,
             'event_id': self.event_id,
             'name': self.name,
             'phone': self.phone,
             'start': self.start,
             'buyins': self.buyins,
-            'day1': self.day1 if self.day1 is not None else '',
-            'day2': self.day2 if self.day2 is not None else '',
-            'day3': self.day3 if self.day3 is not None else '',
-            'day4': self.day4 if self.day4 is not None else '',
-            'day5': self.day5 if self.day5 is not None else '',
-            'day6': self.day6 if self.day6 is not None else '',
-            'day7': self.day7 if self.day7 is not None else '',
             'pl': self.pl,
             'days_played': self.days_played,
             'row': self.row_order
         }
+        # Add day fields dynamically
+        for day_num in range(1, 8):
+            day_attr = f'day{day_num}'
+            day_value = getattr(self, day_attr)
+            result[day_attr] = day_value if day_value is not None else ''
+        return result
 
 class SettlementPayment(Base):
     """SettlementPayment model - tracks payment status for settlements"""
