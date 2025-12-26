@@ -638,20 +638,33 @@ function createTableRow(player, index) {
 function calculatePL(player) {
     const start = parseFloat(player.start) || 20;
     const buyins = parseInt(player.buyins) || 0;
+    
+    // Sum P/L from each day
+    let totalPL = 0;
     let daysPlayed = 0;
-    let lastValue = start;
     
     for (let day = 1; day <= 7; day++) {
-        const dayValue = parseFloat(player['day' + day]);
-        if (dayValue) {
+        const dayKey = 'day' + day;
+        const dayValueStr = player[dayKey];
+        
+        // Skip empty strings and null/undefined, but allow 0
+        if (dayValueStr === '' || dayValueStr === null || dayValueStr === undefined) {
+            continue;
+        }
+        
+        const dayValue = parseFloat(dayValueStr);
+        if (!isNaN(dayValue)) {
+            // Each day's P/L is: ending chips - starting chips for that day
+            const dayPL = dayValue - start;
+            totalPL += dayPL;
             daysPlayed++;
-            lastValue = dayValue;
         }
     }
     
     if (daysPlayed > 0) {
-        const totalInvestment = start + (buyins * 20);
-        return lastValue - totalInvestment;
+        // Subtract buy-in costs from total P/L
+        totalPL -= (buyins * 20);
+        return totalPL;
     }
     
     return 0;
